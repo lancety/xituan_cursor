@@ -1,0 +1,6 @@
+---
+description: do not run migration sql script without asking for permision
+globs:
+alwaysApply: false
+---
+do not run migration sql script without asking for permision

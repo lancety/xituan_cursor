@@ -1,0 +1,40 @@
+---
+description: Business error API shapes — single (A), collection lineErrors (B), mixed (AB); backend throw and client i18n display
+alwaysApply: true
+---
+
+# Business Error Response (A / B / AB)
+
+## Shape selection (by API business domain, not error count)
+
+| Shape | When | `error.code` | `lineErrors` |
+|-------|------|--------------|--------------|
+| **A** Single | API operates on one business instance only | Specific code | Omit |
+| **B** Collection | API validates a multi-item collection (cart checkout, batch lines) | Collection umbrella code (e.g. `ORDER_ITEMS_INVALID`) | Required when any line fails; **length 1 still uses B** |
+| **AB** Mixed | API has both single-instance and collection domains | Single-instance code when that side fails | Present when collection side fails; both may coexist |
+
+Do **not** downgrade collection APIs to A when only one line fails.
+
+## Backend rules
+
+- Throw `BusinessError` with `eBusinessErrorCode`; never `new Error('user-facing Chinese')` as the API contract.
+- Collection validators: loop all items, accumulate `lineErrors`, do not stop at first failure.
+- Typical order: **B first** (cart lines) short-circuit, or **A first** (user/order) — per endpoint design. AB same-response is rare; contract must still support `code` + `lineErrors` together.
+- Controllers: use `error.toApiResponse()` or full `errorData` serialization. Do not strip `lineErrors` or other optional fields.
+- API must not return locale-specific messages; clients map `code` (and per-line `code`) to i18n.
+
+## Frontend rules
+
+- Parse with `businessErrorLineUtil` from xituan_codebase (`classifyErrorShape`, `extractLineErrors`).
+- Handle by **page/API context**: single handler (A), collection handler (B), or mixed (AB).
+- **B**: row-level hints from `lineErrors[].code` + summary toast/modal.
+- **AB**: apply collection UI first (highlights), then single-instance modal when both present.
+- Never display `Error.message` or raw backend Chinese strings to users.
+
+## Adding a new code
+
+1. Add to `eBusinessErrorCode` in xituan_codebase.
+2. Add i18n: Site `messages/*.json` (`businessError.{CODE}.short|summary`); WeChat `business-error-message.util.ts`.
+3. Register handlers where the API is consumed (`CommonErrorHandlers`, checkout utils, etc.).
+
+See skill `.cursor/skills/business-error-line-errors/SKILL.md` for implementation checklist.

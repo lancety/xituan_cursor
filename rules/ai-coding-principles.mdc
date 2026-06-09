@@ -1,0 +1,155 @@
+---
+description: Core principles for AI code changes—reuse vs duplication, minimal diff for fixes, when to refactor, and post-deploy phased deployment
+alwaysApply: true
+---
+
+# AI Coding Principles
+
+Apply these rules **before** implementing. Match existing project conventions; keep diffs focused.
+
+## New feature / module
+
+### 1. Search before building
+
+- Check whether related functionality already exists (grep, codebase search, existing skills/devGuide).
+- Prefer extending or calling existing code over parallel implementations.
+- If unsure whether a shared tool exists, ask the developer before inventing a new one.
+
+### 2. Reuse and placement
+
+**"Single app"** means one repo under the monorepo (`xituan_backend`, `xituan_cms`, etc.) — **not** the workspace root `xituan_module/`.
+
+Place code by **reuse scope within that app repo**:
+
+| Reuse scope | Typical location (follow existing neighbors) |
+|-------------|-----------------------------------------------|
+| One domain / feature only | That module's folder, e.g. `src/domains/<domain>/utils/` (backend) or feature subfolder under `src/utils/` (CMS) |
+| Shared across domains in one app | App-wide utils, e.g. `src/shared/utils/` (backend), `src/utils/` or `src/lib/` (CMS) |
+| Tied to one component tree but reused there | Colocate under that feature, e.g. `src/components/<feature>/*.util.ts` |
+
+Do **not** default to the app repo root or a generic top-level `utils/` when the logic belongs to a specific domain — match how sibling code in that feature is already organized.
+
+| Cross-app scope | Where to put reusable code |
+|-----------------|----------------------------|
+| Multiple apps | `xituan_codebase` at the correct layer (types, enums, utils) |
+
+When touching shared code, follow **`xituan-codebase-change-scope`** skill for consumer impact and dependency boundaries.
+
+### 3. When extraction is worth it
+
+Extract reusable code only when **all** of the following hold:
+
+- **Scenario overlap is complete** — callers share the same inputs, outputs, invariants, and failure modes. Partial overlap is not enough by itself.
+- **The reusable block is substantial** — large enough that duplication would clearly hurt maintenance; a few shared lines do not justify a new abstraction.
+- **One behavior, one implementation** — do not build a shared helper with branching for different projects, cases, or optional paths unless those cases are truly identical at the contract level.
+
+**Do not extract** when reuse would require multi-case switches, optional parameters for divergent business rules, or "works for A and mostly for B." Inline or duplicate locally instead; wrong abstraction is worse than small duplication.
+
+### 4. New module dependencies
+
+- Add dependencies only when necessary; prefer existing stack and in-repo utilities.
+- Avoid circular imports and pulling heavy modules into light callers.
+- For shared exports, keep the public surface minimal and stable.
+
+### 5. Post-deploy phased deployment (production-safe changes)
+
+When a change **could break the current production environment** (released WeChat/Site builds, external integrators, reports) and **not all consumers can ship the same day**:
+
+1. **Design & plan first** — split **Phase 1** (additive, backward-compatible: keep old API/fields, dual-write if needed) from **Phase N cleanup** (DROP columns, remove routes, stop shims). Define a **verifiable Gate** before cleanup (e.g. WeChat version full rollout).
+2. **Register before Phase 1 code** — create an entry under `xituan_agent/devGuide/post-deploy-ledger/entries/` and a row in `registry.md`; link from the Cursor plan / devGuide.
+3. **Deploy Phase 1 only** — no destructive migration or API removal in the same release as the incremental change unless explicitly approved big-bang.
+4. **After prod deploy** — confirm Phase 1 in production; update ledger status (`active` / `blocked`); track until Gate is met.
+5. **Cleanup when idle or scheduled** — verify Gate → implement Phase N → deploy → mark entry `done` and archive in registry.
+
+Follow **`.cursor/skills/post-deploy-ledger/SKILL.md`** for pre-deploy / post-deploy scope design. Global rule: **`xituan_agent/devGuide/agent-global-dev-rules-checklist.md` §11**.
+
+**Routine check:** say **「检查 post-deploy」** (or open `post-deploy-ledger/registry.md`) — active `active` / `blocked` rows should be **0** before assuming no deferred cleanup.
+
+**Do not** put Phase N cleanup in the same PR as Phase 1 by default. **Do not** drop compatibility layers without checking `registry.md`.
+
+---
+
+## Bug fix
+
+### 1. Prefer the smallest correct fix
+
+- Start with the **minimal change** that fixes the root cause.
+- Do not expand scope into unrelated refactors unless justified below.
+
+### 2. Patch vs refactor
+
+| Situation | Action |
+|-----------|--------|
+| Isolated bug, clear one-line fix | Patch in place |
+| Area already has layered patches / defensive branches | Refactor if the refactor is **small** and removes the patch stack |
+| Fix would add another patch on patchy code | Prefer small refactor over a third workaround |
+
+### 3. Simplify when it improves the fix
+
+- If the buggy path can be replaced by a **clearer, shorter** approach, remove redundant code and use the better path.
+- **Constraints (non-negotiable):**
+  - Preserve existing behavior and compatibility for current callers.
+  - Do not remove hooks or extension points needed by other modules or likely future use.
+
+When simplification would break contracts or obscure behavior, keep the minimal patch instead.
+
+### 4. Simplify over compatibility shims (small blast radius)
+
+When a fix touches **types, exports, or renamed symbols**, **grep first** for real consumers. Then pick the **shortest** path that fixes the root cause.
+
+| Prefer | Avoid (when blast radius is small) |
+|--------|-------------------------------------|
+| Use the **canonical name/type** at the definition and update **each call site** | `export type { A as B }`, import+re-export alias, or other shims **only** to avoid renaming 1–few files |
+| **Delete** redundant aliases / duplicate interfaces once callers are updated | Keeping legacy export names “just in case” when nothing meaningful depends on them |
+| Match a **sibling pattern** already in the same folder (e.g. `order.style.ts` uses `iOrderStatusStyle` directly) | Inventing a new export pattern for the same concept |
+
+**Small blast radius** = a handful of files (often one). In that case, **rename/import at call sites** beats preserving an alias. Compatibility layers are for **many** external dependents or published API surfaces—not for a single util import.
+
+**Example (do this):** TS error because `export type { X as Y } from '...'` is not in local scope → import `X` in the defining file and change the one consumer to import `X` from the canonical module.
+
+**Example (don't do this):** Same error → add `import type { X as Y }` + `export type { Y }` so one consumer can keep importing `Y` from a non-canonical path.
+
+### 5. Frontend complex render / state bugs (log-assisted diagnosis)
+
+Applies to hard-to-reproduce UI issues: conditional render, effects, memoization, list keys, layout thrashing, stale closure state, etc.
+
+**Phase A — code-first (default)**
+
+- Try **at most ~2** focused code-only fix attempts (root-cause hypothesis + minimal diff each time).
+- If the developer confirms the issue is **still not fixed** after those attempts, stop guessing and move to Phase B.
+
+**Phase B — targeted diagnostic logs**
+
+- Add **only necessary** logs at decision points (props/state in, branch taken, effect run/cleanup, render count if useful).
+- Use a **consistent, grep-friendly prefix** (e.g. `[FeatureName:debug]`) so the developer can filter and copy console output quickly.
+- Tell the developer exactly what to do (steps, filter string) and what log lines to paste back.
+- Do **not** leave noisy permanent logging in production paths; avoid logging secrets or large payloads.
+
+**Phase C — cleanup (required after fix)**
+
+- Remove **all** diagnostic logs added in Phase B in the same change (or immediately follow-up) that ships the real fix.
+- Do not leave "just in case" debug logs behind.
+
+---
+
+## Decision checklist
+
+**New work**
+
+- [ ] Searched for existing implementation
+- [ ] Reuse is 100% scenario-aligned, or duplication is intentional
+- [ ] Shared code lives in the right repo/layer; dependencies are clean
+- [ ] If change could break released production consumers: phased plan + post-deploy ledger entry (see §5)
+
+**Fix**
+
+- [ ] Root cause identified; diff is as small as possible
+- [ ] Grep’d consumers; chose direct rename/canonical import over alias/re-export shim when blast radius is small
+- [ ] Chose refactor only when patch stack or clarity warrants it
+- [ ] Any deletion/simplification keeps compatibility and future support
+
+**Frontend render bug (if applicable)**
+
+- [ ] ≤2 code-only attempts before log-assisted diagnosis (or developer asked for logs earlier)
+- [ ] Diagnostic logs are minimal, prefixed, and copy-friendly
+- [ ] All Phase B logs removed after the fix lands

@@ -1,0 +1,11 @@
+---
+description: migrations_stable SQL is human-synced only; AI writes new migrations under xituan_backend/migrations
+alwaysApply: true
+---
+
+# Migrations stable folder
+
+- **Do not create or edit** SQL files under `xituan_backend/migrations_stable/` as part of AI implementation.
+- **New migrations** must be added under `xituan_backend/migrations/` only, using the **next numeric index** after the highest existing file in that folder.
+- The developer **manually copies** (or promotes) scripts from `migrations/` into `migrations_stable/` when appropriate for their release process.
+- **Do not run** migration SQL against a database without explicit user permission (see project migration-sql rule).

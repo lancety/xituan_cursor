@@ -1,0 +1,47 @@
+---
+description: Date and Time Format Standard for Frontend-Backend Communication
+globs: ["**/*.ts", "**/*.tsx", "**/*.js", "**/*.jsx"]
+alwaysApply: true
+---
+
+# Date and Time Format Standard
+
+## Core Rule
+Always use **YYYY-MM-DD** string format when transmitting date data between frontend and backend. Never convert dates through timezone offsets.
+
+## Two Database Column Types - Different Handling
+
+### Type 1: `date` type (Date-only fields)
+**Examples**: `revenueDate`, `expenseDate`, `purchaseDate`
+- **Database**: `@Column({ type: 'date' })` - stores only date (YYYY-MM-DD), no time or timezone
+- **Frontend to Backend**: Send `YYYY-MM-DD` string: `dayjs(date).format('YYYY-MM-DD')`
+- **Backend Receiving**: Accept string directly, use `datetimeUtil.normalizeDate()` to get Date object for calculations
+- **Backend Saving**: TypeORM accepts `YYYY-MM-DD` string directly, or use normalized Date object
+- **No timezone conversion needed** - date string is used as-is
+
+### Type 2: `timestamp with time zone` type (DateTime fields)
+**Examples**: `issueDate`, `dueDate` in partner invoices
+- **Database**: `@Column({ type: 'timestamp with time zone' })` - stores full datetime with timezone
+- **Frontend to Backend**: Convert business timezone to UTC: `timeZoneToUtc(date, timezone).toISOString()`
+- **Backend Receiving**: Accept ISO string, stored as UTC timestamp
+- **Backend to Frontend**: Convert UTC to business timezone: `utcToTimeZone(date, timezone)`
+- **Timezone conversion required** - use dayjs utc/timezone plugins
+
+## Frontend to Backend (for `date` type)
+- Send dates as `YYYY-MM-DD` string: `dayjs(date).format('YYYY-MM-DD')`
+- Never send Date objects or ISO strings with time
+
+## Backend Receiving (for `date` type)
+- Accept `YYYY-MM-DD` string directly
+- Use `datetimeUtil.normalizeDate()` to get Date object for calculations
+- TypeORM `date` type accepts Date object (normalized to UTC) or `YYYY-MM-DD` string
+- Never convert string to Date with `new Date(dateString)` - causes timezone issues
+
+## Backend to Frontend
+- TypeORM returns Date objects, JSON serializes to ISO strings
+- Frontend uses dayjs to parse and format for display
+
+## Database
+- **Date-only fields**: Use `date` type (not `timestamp with time zone`)
+- **DateTime fields**: Use `timestamp with time zone` if timezone conversion is needed
+- Date calculations: parse with `new Date(dateString + 'T12:00:00')` to avoid timezone edge cases

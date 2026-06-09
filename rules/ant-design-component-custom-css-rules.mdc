@@ -1,0 +1,40 @@
+---
+description: Ant Design Component Custom CSS Rules
+globs: ["**/*.css", "**/*.module.css"]
+alwaysApply: true
+---
+
+# Ant Design Component Custom CSS Rules
+
+## Core Principles
+- Centralized Color Management: All color definitions must be in global.css using CSS variables or theme selectors
+- Minimal Implementation: Only define necessary styles, avoid duplicating default settings
+- Theme Consistency: Dark/light modes must be handled separately, never use fixed color values
+
+## Implementation Steps
+1. Check Global Styles
+   - First check if global.css already has corresponding theme color settings
+   - Use existing CSS variables (e.g., var(--text-primary))
+   - Leverage existing theme selectors (e.g., body[data-theme='dark'])
+
+2. Color Handling Rules
+   - Forbidden: Direct fixed color values (e.g., color: #fff)
+   - Required: Use body[data-theme='dark'] and body[data-theme='light'] separately
+   - Preferred: Use global CSS variables
+   - Exception: Brand colors can use fixed values
+
+3. Style Definition Scope
+   - Page-specific: Layout, spacing, special effects in page CSS
+   - Global scope: Common component styles in global.css
+   - Avoid duplication: Don't repeat Ant Design default styles
+
+4. Cleanup Standards
+   - Remove styles with no difference from default effects
+   - Eliminate hardcoded color values
+   - Merge duplicate style definitions
+   - Keep necessary layout and functional styles
+
+5. Naming Conventions
+   - Use semantic class names
+   - Avoid conflicts with Ant Design class names
+   - Keep it concise and clear

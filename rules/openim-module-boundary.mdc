@@ -1,0 +1,41 @@
+---
+description: OpenIM domain boundaries — routes, storage, and what not to mix with merchant catalog S3.
+globs:
+  - xituan_backend/src/domains/openim/**
+  - xituan_backend/src/utils/openim*.util.ts
+  - xituan_backend/migrations/*openim*
+---
+
+# OpenIM module boundary
+
+## Scope
+
+- Business IM lives in `src/domains/openim/` and `im` PostgreSQL schema.
+- Message bodies stay in **OpenIM**; PG holds mappings, participants, snapshots, attachments metadata.
+- **Do not** copy full message history into PG.
+
+## API channels (by initiating client)
+
+| Prefix | Client |
+|--------|--------|
+| `/api/openim/customer-merchant/*` | WeChat / Site (JWT) |
+| `/api/admin/openim/customer-merchant/*` | CMS merchant staff |
+| `/api/openim/merchant-push/*` | Customer read-only (P1) |
+| `/api/admin/openim/merchant-push/*` | Merchant send (P1, `MERCHANT_PUSH` feature) |
+
+`customer_merchant` is bidirectional and **not** gated by `MERCHANT_PUSH`. `merchant_push` sets `allow_customer_send = false`.
+
+## S3
+
+- Chat attachments: `im/conversations/{conversationId}/attachments/{yyyy}/{mm}/{fileId}.ext`
+- Use `openimAttachmentS3Util` — **not** `s3UploadManager` merchant/user prefixes.
+
+## Enums / types
+
+- Shared contracts: `xituan_codebase/typing_entity/openim-chat.enum.ts`, `typing_api/openim-chat.type.ts`
+- Never hardcode conversation type strings; use `epOpenimConversationType` / `epOpenimChannel`.
+
+## Migrations
+
+- New SQL only under `xituan_backend/migrations/` (next index).
+- Do not edit `migrations_stable/` or run SQL without explicit permission.

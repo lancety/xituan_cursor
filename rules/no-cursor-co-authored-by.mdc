@@ -1,0 +1,31 @@
+---
+description: Do not add Cursor Co-authored-by trailer to git commits
+alwaysApply: true
+---
+
+# Git Commit — No Cursor Co-authored-by
+
+Never add **Co-authored-by** (or any other trailer) attributing Cursor or the agent to commit messages.
+
+## Forbidden
+
+- `Co-authored-by: Cursor <cursoragent@cursor.com>`
+- Any variant (different casing, spacing, or email) that credits Cursor/agent as co-author
+
+## Required
+
+- Commit messages contain only the human-authored summary/body the user expects.
+- When using HEREDOC or `-m` for `git commit`, do not append Co-authored-by lines.
+- If a hook or tool auto-injects such a trailer, do not add another; inform the user if it persists.
+
+## Examples
+
+```
+# BAD
+fix: correct stock calculation
+
+Co-authored-by: Cursor <cursoragent@cursor.com>
+
+# GOOD
+fix: correct stock calculation
+```
