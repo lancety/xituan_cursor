@@ -198,11 +198,20 @@ git push origin master
 
 0. **`master` 分支与终止条件**检查；非 `master` 则 `git checkout master`，失败则 **STOP** 并交给用户。
 1. 视需要保持与远程一致：可先 `git pull origin master`（若本地有未提交改动阻碍 pull，必须用 **「Stash 使用规则」** 的同一 `$STASH_TAG`：**本目录** `stash push -m "$STASH_TAG"` → `pull` → **仅** `stash pop "stash^{/$STASH_TAG}"`；**禁止**沿用仓库内旧 stash、**禁止**无参 pop）。
-2. 确认子模块指针已更新：`git status` 中 `submodules/xituan_codebase` 等应反映**本轮**阶段 2 已执行的结果（或与阶段 1 未跳过时的远程 `master` SHA 一致）。若该主项目在阶段 2 曾整 repo 跳过，本步仅核对当前指针与业务预期，不要求与阶段 2 对齐。
-3. **主仓库变更与子模块指针一并提交并推送**（见上文「主仓库提交范围」）：默认 `git add -A` → `git commit -m "..."` → **`git push origin master`**。  
+2. **`xituan_wechat_app` 专用（在 commit 前）**：若本阶段未跳过该主仓，且子模块或 manifest 源文件可能有变更，在 `xituan_wechat_app` 根目录执行：
+   ```bash
+   cd xituan_wechat_app
+   npm run sync:wechat-main-constants
+   npm run verify:wechat-main-constants
+   ```
+   将 `lib/wechat-main-constants/**` 与 `scripts/wechat-main-constants.manifest.mjs` 等一并纳入主仓提交。可选全量检查：`npm run lint`。
+3. 确认子模块指针已更新：`git status` 中 `submodules/xituan_codebase` 等应反映**本轮**阶段 2 已执行的结果（或与阶段 1 未跳过时的远程 `master` SHA 一致）。若该主项目在阶段 2 曾整 repo 跳过，本步仅核对当前指针与业务预期，不要求与阶段 2 对齐。
+4. **主仓库变更与子模块指针一并提交并推送**（见上文「主仓库提交范围」）：默认 `git add -A` → `git commit -m "..."` → **`git push origin master`**。  
    - 已干净且与 `origin/master` 同步则跳过 commit/push。  
    - 若用户明确要求仅 bump 子模块，可只 `git add submodules/xituan_codebase` 并单独提交。  
    - `xituan_backend` 若本地已有多个未推送 commit，可在一次 `git push origin master` 中一并推送。
+
+**`xituan_wechat_app` commit message 示例**：`chore(wechat): sync wechat-main-constants after codebase bump`
 
 ---
 
@@ -262,7 +271,7 @@ git push origin master
 - [ ] **Stash**：仅创建/恢复/丢弃带**本轮** `$STASH_TAG` 的条目；未创建 stash 的目录未执行 `pop`；未对历史 `stash@{n}` 做无参 `stash pop`。
 - [ ] 阶段 1：若 **未**整 repo 跳过 backend，则 `xituan_backend/submodules/xituan_codebase` 已 **pull → add → commit（若有）→ push `origin master`**；若已跳过则本项 N/A。
 - [ ] 阶段 2：对 **未**跳过的 consumer 子模块已 **按 Stash 规则**（`$STASH_TAG`、仅 pop 本轮创建）**stash（若有）→ pull → pop（若有）→ commit（若有）→ push `origin master`**
-- [ ] 阶段 3：对 **未**跳过的主项目已 **默认**将主仓工作区变更与子模块指针 **一并** `commit` + **`push origin master`**（除非用户明确「仅 bump 子模块」）
+- [ ] 阶段 3：对 **未**跳过的主项目已 **默认**将主仓工作区变更与子模块指针 **一并** `commit` + **`push origin master`**（除非用户明确「仅 bump 子模块」）；**`xituan_wechat_app`** 已在 commit 前执行 `sync:wechat-main-constants` + verify（若 applicable）
 - [ ] 阶段 4：`xituan_agent` 在 **`master`** 上已 commit + `push origin master`（若有文档变更；无待同步时可跳过）
 - [ ] 阶段 5：`.cursor` / **`xituan_cursor`** 在 **`master`** 上已 **最后** commit + `push origin master`（若有 rules/skills/plans 变更；无待同步时可跳过）
 - [ ] 所有 **`git commit` message** 符合「Commit message 约束」：**无** Cursor 相关备注或元信息
