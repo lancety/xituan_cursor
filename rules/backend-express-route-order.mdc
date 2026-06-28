@@ -1,0 +1,46 @@
+---
+description: Express route mount and registration order in xituan_backend — avoid admin/CMS requests captured by public /api routers or dynamic /:id routes.
+globs: xituan_backend/src/app.ts, xituan_backend/src/**/routes/**/*.ts
+alwaysApply: false
+---
+
+# Backend Express route order
+
+Use with skill `.cursor/skills/api-route-groups/SKILL.md` (which **group**). This rule covers **where to register** routes so earlier handlers do not steal requests or run wrong middleware.
+
+## `app.ts` — mount order
+
+1. **Specific prefix before broad prefix** — register `/api/admin/products`, `/api/orders`, `/api/merchant-settings`, etc. **before** any `app.use('/api', broadRouter)`.
+2. **CMS/admin never after payment-gated public routers** — `createOfferRoutes` and `createProductRoutes` run `merchantCheckoutCapableMiddleware` on **every** request that enters their `/api` mount, even when no route matches. Register all `/api/admin/*`, `/api/printTemps`, and store admin (`/api/admin/stores` via `createStoreAddressRoutes`) **above** them.
+3. **Payment-gated `/api` mounts last** — order: all CMS/admin → `createStoreAddressRoutes` → `createOfferRoutes` → other public `/api` → `createProductRoutes` (last). C-end stays payment-gated; CMS does not.
+4. **CMS business APIs use `/api/admin/*`** — do not call public `/api/products` or `/api/categories` from CMS when an admin route exists or should exist.
+
+When adding a route, grep `app.ts` for `app.use('/api` and place the new mount **above** `createOfferRoutes` / `createProductRoutes` (or any router whose `router.use(...)` applies checkout-capability to unmatched paths).
+
+## Router file — registration order
+
+Within one `Router()`, Express matches in **registration order**.
+
+1. **Static / multi-segment paths first** — e.g. `/categories`, `/barcodes/available`, `/batch`, `/metadata-schema`.
+2. **Parameterized sub-paths next** — e.g. `/categories/:id/metadata-breakdown`, `/:id/option-groups`.
+3. **Bare dynamic segment last** — `GET /:id`, `PUT /:id`, `DELETE /:id` (product id in admin product router). Never register bare `/:id` before static siblings like `/barcodes/available`.
+
+## Quick checklist (new endpoint)
+
+- [ ] Correct route group (admin vs public vs partner-access)?
+- [ ] In `app.ts`, mounted before any broad `/api` router with global middleware?
+- [ ] In router file, static and longer paths registered before bare `/:id`?
+- [ ] CMS consumer updated to admin path if endpoint is CMS-only?
+
+## Example (admin products)
+
+```typescript
+// ✅ GOOD — static before product id
+router.get('/barcodes/available', ...);
+router.get('/:id/option-groups', ...);
+router.get('/:id', ...);
+
+// ❌ BAD — /barcodes/available matches GET /:id with id = "barcodes"
+router.get('/:id', ...);
+router.get('/barcodes/available', ...);
+```

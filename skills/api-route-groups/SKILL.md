@@ -39,8 +39,16 @@ Do **not** mix third-party routes with general public routes. Keep them in a ded
 
 All use UUID validation middleware; no auth headers required.
 
+## Route mount / registration order
+
+Which **group** (this skill) is separate from **where to register** in `app.ts` and route files. Follow rule `.cursor/rules/backend-express-route-order.mdc` when adding or moving routes — especially:
+
+- Register `/api/admin/*` and other CMS paths **before** `createProductRoutes` (public product router runs checkout-capability middleware on all `/api` traffic it receives).
+- Inside a router file: static paths and multi-segment paths **before** bare `/:id`.
+
 ## Reference
 
 - Implementation: `xituan_backend/src/domains/partner/routes/partner-access.routes.ts`.
 - App registration: `xituan_backend/src/app.ts` (search for `partner-access`).
+- Mount order rule: `.cursor/rules/backend-express-route-order.mdc`.
 - Design: `xituan_agent/devGuide/Partner-Supply-List-Design.md` (§4.4, §8.3).
