@@ -1,0 +1,64 @@
+---
+description: WeChat 小程序主包/分包 import 硬边界 — 禁止 sync value-import codebase 或分包，防分享冷启动 module is not defined。
+globs:
+  - xituan_wechat_app/**/*.ts
+  - xituan_wechat_app/app.json
+  - xituan_wechat_app/project.config.json
+---
+
+# WeChat 主包/分包 import 边界（硬性）
+
+`submodules/` 是 `codebase` **分包**，`packageIm|packageTrade|packageMerchant|packageSubPages|packageUtil` 也是分包。
+分享链接冷启动时页面 JS 与 bootstrap **并行**加载，分包尚未就绪 —— 任何模块求值阶段的 sync require 都会炸：
+`module 'submodules/xituan_codebase/...' is not defined` → `wx://not-found`。
+
+`LazyCodeLoading: true` 会放大该后果。**这不是可选风格，是运行时约束。**
+
+## 选择 import 来源
+
+| 需要什么 | 用哪个 |
+|----------|--------|
+| 仅类型注解 | `import type { ... } from '../submodules/xituan_codebase/...'` ✅ 允许 |
+| 运行时 enum / 常量（含 `data`、`properties.value`、模块顶层 const） | `lib/wechat-main-constants/...`（manifest sync 生成） |
+| 业务 util / service | `codebaseBootstrapAccessUtil.xxx`，**只能在函数体 / `onLoadPage` / `attached` 内取值** |
+| 分包内模块 | `*-host.util.ts` + `require.async`，禁止直接 import 分包根 |
+
+同步 value-import codebase 的白名单仅：`submodules/wechat-bootstrap.util.ts`、`lib/codebase-host.util.ts`。
+
+## 反例 / 正例
+
+```ts
+// ❌ 主包或分包顶层 sync value-import codebase → 冷启动崩
+import { siteCartDeepLinkUtil } from '../submodules/xituan_codebase/utils/site-cart-deep-link.util';
+
+export const xxxUtil = {
+  buildUrl: () => siteCartDeepLinkUtil.buildCartUrlForEnv(...),
+};
+
+// ✅ util 走 bootstrap，函数内惰性取
+import { codebaseBootstrapAccessUtil } from './codebase-bootstrap-access.util';
+
+export const xxxUtil = {
+  buildUrl: () => codebaseBootstrapAccessUtil.siteCartDeepLinkUtil.buildCartUrlForEnv(...),
+};
+
+// ✅ 运行时 enum 走 manifest 同步产物
+import { epBadgeBtnColor } from '../../lib/wechat-main-constants/constants/badge-style.enum';
+```
+
+## 新增依赖时的固定流程
+
+- **新 codebase util** → 先在 `submodules/wechat-bootstrap.util.ts` 加 import + 加进导出对象，再用 `codebaseBootstrapAccessUtil`。
+- **新 runtime enum** → 先在 `scripts/wechat-main-constants.manifest.mjs` 加一行 → `npm run sync:wechat-main-constants` → 再改业务 import。禁止手改 `lib/wechat-main-constants/**`。
+
+## 自检（改完必须跑）
+
+```bash
+cd xituan_wechat_app
+npm run check:subpackage-imports   # 分包/codebase import 边界
+npm run lint                       # 上者 + no-bootstrap-module-init 等全量
+```
+
+两者的 verify 与 ESLint 各自独立执行，constants drift 不会掩盖 import 违规。
+
+详见 `xituan_agent/devGuide/wechat-subpackage-bootstrap-contract.md`、`wechat-bootstrap-gate-share-coldstart.md`。
