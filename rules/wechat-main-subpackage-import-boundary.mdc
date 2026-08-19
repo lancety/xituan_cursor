@@ -20,7 +20,7 @@ globs:
 |----------|--------|
 | 仅类型注解 | `import type { ... } from '../submodules/xituan_codebase/...'` ✅ 允许 |
 | 运行时 enum / 常量（含 `data`、`properties.value`、模块顶层 const） | `lib/wechat-main-constants/...`（manifest sync 生成） |
-| 业务 util / service | `codebaseBootstrapAccessUtil.xxx`，**只能在函数体 / `onLoadPage` / `attached` 内取值** |
+| 业务 util / service | `codebaseBootstrapAccessUtil.xxx`，只能在函数体内取值，且 `Component` 的 `attached`/`created`/`ready`、`pageLifetimes.show`、`observers` 必须先 `await whenBootstrapReady()` 或 `startBootstrap().then(...)`（分享冷启动时这些钩子早于 bootstrap） |
 | 分包内模块 | `*-host.util.ts` + `require.async`，禁止直接 import 分包根 |
 
 同步 value-import codebase 的白名单仅：`submodules/wechat-bootstrap.util.ts`、`lib/codebase-host.util.ts`。
@@ -56,7 +56,7 @@ import { epBadgeBtnColor } from '../../lib/wechat-main-constants/constants/badge
 ```bash
 cd xituan_wechat_app
 npm run check:subpackage-imports   # 分包/codebase import 边界
-npm run lint                       # 上者 + no-bootstrap-module-init 等全量
+npm run lint                       # 上者 + no-bootstrap-module-init + no-ungated-bootstrap-in-early-lifecycle
 ```
 
 两者的 verify 与 ESLint 各自独立执行，constants drift 不会掩盖 import 违规。
