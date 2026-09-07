@@ -134,6 +134,8 @@ npm run jobs:backfill-normalize -- --env production --confirm-prod --kinds news_
 npm run jobs:backfill-normalize -- --env production --confirm-prod --force --variants-only --kinds expense_receipt
 ```
 
+Upload HTTP path uses `imageNormalizeEnqueueUtil` **sync** (wait for terminal). C4 backfill uses **inline worker directly** / async — do not block API.
+
 Requires `platform.async_jobs` migration. See `xituan_agent/devGuide/planned-work/entries/2026-09-image-normalize-full-backfill.md`.
 
 ## Review checklist (PR / audit)
