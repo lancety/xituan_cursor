@@ -52,6 +52,7 @@ Do **not** invent parallel size tables in app code. Enum edges: `enSiteImageSize
    3. Prune orphans if removing edges (`--prune-orphans`)
    4. Then wire UI to the new edge
 7. Progressive kinds only: use `tImageNormalizeProgressiveKind`. Do **not** pass `EXPENSE_RECEIPT` into `siteImageProgressiveUtil.resolveUrls`.
+8. **`_w*` pre-gen resize**: Sharp `fit: 'inside'` within `edge×edge` (proportional, no short-edge crop). Never `fit: 'cover'` for variants. Canonical long-side limit also uses `inside`. UI may still use CSS `object-fit: cover` for square frames.
 
 ## Typical kind → UI mapping
 
@@ -129,6 +130,8 @@ App wrappers (`siteImageUtil.getImageUrl`, CMS helpers, WeChat `getContentUrlIma
 cd xituan_backend
 npm run jobs:backfill-normalize -- --env production --dry-run
 npm run jobs:backfill-normalize -- --env production --confirm-prod --kinds news_images
+# Re-encode `_w*` only (keep canonical): --force --variants-only
+npm run jobs:backfill-normalize -- --env production --confirm-prod --force --variants-only --kinds expense_receipt
 ```
 
 Requires `platform.async_jobs` migration. See `xituan_agent/devGuide/planned-work/entries/2026-09-image-normalize-full-backfill.md`.

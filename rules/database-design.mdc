@@ -1,0 +1,53 @@
+---
+description: Hard database design rules (timestamptz default; extend with other DB mandates)
+alwaysApply: true
+---
+
+# Database Design (hard rules)
+
+Hard constraints for schema / migrations / TypeORM entities. Prefer this file for **new** database mandates.
+
+Related: `date-time-format-standard.mdc` (API wire format after column type is chosen); `migrations-stable-manual-only.mdc` (where to put SQL).
+
+## Date / time columns (mandatory)
+
+**Default: always use `timestamp with time zone` (`timestamptz`).**
+
+Applies to any calendar time, deadline, expiry, start/end, created/updated business timestamps, and similar.
+
+| Do | Do not (unless developer explicitly opts out) |
+|----|-----------------------------------------------|
+| `timestamp with time zone` / TypeORM `type: 'timestamp with time zone'` | `date`, `timestamp` without time zone, `timestamp without time zone` |
+| Store UTC; convert at edges via merchant timezone utils | Rely on DB/session local time or implicit offsets |
+
+**Exception:** use PostgreSQL `date` (date-only) **only** when the developer **explicitly** says so (e.g. “只要日期不要时区”, `revenueDate`-style day ledger). Never choose `date` by default.
+
+Wire format after type is chosen:
+
+- `timestamptz` → Type 2 in `date-time-format-standard.mdc` (`timeZoneToUtc` / `utcToTimeZone`, ISO)
+- explicit `date` → Type 1 (`YYYY-MM-DD`, no TZ shift)
+
+```sql
+-- BAD (default path)
+expire_date date NULL;
+
+-- GOOD
+expire_date timestamp with time zone NULL;
+```
+
+```typescript
+// BAD
+@Column({ type: 'date', name: 'expire_date', nullable: true })
+
+// GOOD
+@Column({ type: 'timestamp with time zone', name: 'expire_date', nullable: true })
+```
+
+## Migrations placement
+
+- New SQL only under `xituan_backend/migrations/` with the **next** numeric index.
+- Do **not** edit `migrations_stable/` as part of AI implementation.
+
+## Future hard rules
+
+Add further non-negotiable schema / index / FK / naming rules in sections below this line.
