@@ -69,6 +69,7 @@ Do **not** invent parallel size tables in app code. Enum edges: `enSiteImageSize
 | Expense receipt | `EXPENSE_RECEIPT` (**only** `s256` + canonical) |
 | OpenIM chat image | `OPENIM_CHAT_IMAGE` |
 | Print template asset | `PRINT_TEMP_IMAGE` (png) |
+| QR / barcode (e.g. storefront wxacode) | `BARCODE` (**only** `s256`+`s512` + canonical; **png**) |
 
 Default full set (most kinds): `_w64/_w128/_w256/_w512` + canonical. Format webp unless logo/printTemp → png.
 
