@@ -2,9 +2,10 @@
 name: xituan-multirepo-codebase-sync
 description: >-
   Syncs the shared xituan_codebase Git submodule across xituan_backend, xituan_cms,
-  xituan_platform, xituan_site, and xituan_wechat_app using a fixed order: backend
-  codebase first (when not skipped), then four consumer codebases (when each parent main is
-  not skipped), then five main repos, xituan_agent, and xituan_cursor (.cursor). Per main repo: if the main repo has
+  xituan_platform, xituan_site, xituan_wechat_app, xituan_app_customer, and
+  xituan_app_merchant using a fixed order: backend codebase first (when not skipped),
+  then six consumer codebases (when each parent main is not skipped), then seven main
+  repos, xituan_agent, and xituan_cursor (.cursor). Per main repo: if the main repo has
   nothing to sync (clean, on master, aligned with origin/master), skip that entire project—no
   submodule pull/commit/push for its codebase path and no main-repo pull/commit/push. Stash:
   only pop/apply stashes created in the same run with a unique STASH_TAG; never bare stash pop
@@ -22,7 +23,7 @@ description: >-
 
 `xituan_module` 根目录**不是**单一 Git 仓库。以下每个目录是**独立**远程仓库，且多数包含子模块 `submodules/xituan_codebase`（与 `xituan_backend/submodules/xituan_codebase` 同源）。
 
-## 仓库清单（5 个主项目 + agent + cursor）
+## 仓库清单（7 个主项目 + agent + cursor）
 
 | 路径 | 远程仓库 | 说明 |
 |------|----------|------|
@@ -32,6 +33,8 @@ description: >-
 | `xituan_platform` | `lancety/xituan_platform` | 主项目 + submodule |
 | `xituan_site` | `lancety/xituan_site` | 主项目 + submodule |
 | `xituan_wechat_app` | `lancety/xituan_wechat_app` | 主项目 + submodule |
+| `xituan_app_customer` | `lancety/xituan_app_customer` | Expo 客户 App + submodule（本技能只推 `master`；Git `production` 由批量部署 merge/push，EAS 打商店包） |
+| `xituan_app_merchant` | `lancety/xituan_app_merchant` | Expo 商户 App + submodule（同上） |
 | `xituan_agent` | `lancety/xituan_agent` | 文档/Agent 仓库（无 submodule），**阶段 4** |
 | `.cursor` | `lancety/xituan_cursor` | Cursor rules / skills / plans（无 submodule），**阶段 5（整链最后）** |
 
@@ -59,7 +62,7 @@ description: >-
 
 ## `master` 分支与 AI 终止条件（强制）
 
-在进入任一 Git 仓库路径并执行 `pull` / `commit` / `push` **之前**（含：阶段 1–2 的各 `xituan_codebase` 子模块目录、阶段 3 的五个主仓库根目录、阶段 4 的 `xituan_agent`、阶段 5 的 `.cursor` / `xituan_cursor`）：
+在进入任一 Git 仓库路径并执行 `pull` / `commit` / `push` **之前**（含：阶段 1–2 的各 `xituan_codebase` 子模块目录、阶段 3 的七个主仓库根目录、阶段 4 的 `xituan_agent`、阶段 5 的 `.cursor` / `xituan_cursor`）：
 
 1. **检查当前分支**：`git rev-parse --abbrev-ref HEAD`  
    - 期望输出为 **`master`**。  
@@ -73,7 +76,7 @@ description: >-
 
 **目的**：主项目若当前**不需要**做任何 Git 同步，则**不必**为其 `submodules/xituan_codebase` 执行拉取/提交/推送，也**不必**对该主仓库根目录执行阶段 3 的 pull/commit/push，从而减少无效操作。
 
-### 判定「主仓库无待同步」（对 `xituan_backend`、`xituan_cms`、`xituan_platform`、`xituan_site`、`xituan_wechat_app` 各自主仓库根目录）
+### 判定「主仓库无待同步」（对 `xituan_backend`、`xituan_cms`、`xituan_platform`、`xituan_site`、`xituan_wechat_app`、`xituan_app_customer`、`xituan_app_merchant` 各自主仓库根目录）
 
 在用户**未**明确要求「强制全量同步 / force full sync / 忽略跳过」等前提下，若**同时**满足下列全部条件，则视为该主项目 **整 repo 跳过**：
 
@@ -84,8 +87,8 @@ description: >-
 **则对该主项目**：
 
 - **阶段 1（仅 `xituan_backend`）**：若 **`xituan_backend` 主仓库**满足上述「无待同步」，则**整个阶段 1 跳过**——**不要**进入 `xituan_backend/submodules/xituan_codebase` 做 pull / add / commit / push。
-- **阶段 2（四个 consumer 子模块）**：在处理 `xituan_cms/submodules/xituan_codebase` 等路径之前，先对**其父主仓库**（如 `xituan_cms`）根目录做上述判定；若该主项目 **整 repo 跳过**，则**不要**进入对应 `submodules/xituan_codebase`，**不要**对该子模块执行 stash / pull / pop / commit / push。
-- **阶段 3（五个主项目）**：若该主项目在阶段 2 已按上条 **整 repo 跳过**，或重新按同一条件判定仍为 **无待同步**，则**跳过**该主仓库根目录下的 pull / stash / commit / push 段落。
+- **阶段 2（六个 consumer 子模块）**：在处理 `xituan_cms/submodules/xituan_codebase` 等路径之前，先对**其父主仓库**（如 `xituan_cms`）根目录做上述判定；若该主项目 **整 repo 跳过**，则**不要**进入对应 `submodules/xituan_codebase`，**不要**对该子模块执行 stash / pull / pop / commit / push。
+- **阶段 3（七个主项目）**：若该主项目在阶段 2 已按上条 **整 repo 跳过**，或重新按同一条件判定仍为 **无待同步**，则**跳过**该主仓库根目录下的 pull / stash / commit / push 段落。
 
 **强制全量**：若用户在同一会话中明确要求不跳过（如「强制同步子模块」「force」），则**忽略**本节跳过规则，对该次任务仍按阶段 1–3 的全流程执行。
 
@@ -134,7 +137,7 @@ description: >-
 
 ## 固定执行顺序（必须遵守）
 
-整体顺序：**① backend 子模块 codebase（可跳过）→ ② 其余 4 个子模块 codebase（按主项目逐个可跳过）→ ③ 5 个主仓库（逐个可跳过）→ ④ xituan_agent → ⑤ xituan_cursor（`.cursor`）**。
+整体顺序：**① backend 子模块 codebase（可跳过）→ ② 其余 6 个子模块 codebase（按主项目逐个可跳过）→ ③ 7 个主仓库（逐个可跳过）→ ④ xituan_agent → ⑤ xituan_cursor（`.cursor`）**。
 
 ### 阶段 1 — Codebase：仅从 `xituan_backend` 子模块开始
 
@@ -158,14 +161,16 @@ git push origin master
 
 ---
 
-### 阶段 2 — 其余 4 个项目的 **codebase 子模块**（consumer）
+### 阶段 2 — 其余 6 个项目的 **codebase 子模块**（consumer）
 
-对以下路径**依次**处理（顺序可固定为：`xituan_cms` → `xituan_platform` → `xituan_site` → `xituan_wechat_app`）：
+对以下路径**依次**处理（顺序固定为：`xituan_cms` → `xituan_platform` → `xituan_site` → `xituan_wechat_app` → `xituan_app_customer` → `xituan_app_merchant`）：
 
 - `xituan_cms/submodules/xituan_codebase`
 - `xituan_platform/submodules/xituan_codebase`
 - `xituan_site/submodules/xituan_codebase`
 - `xituan_wechat_app/submodules/xituan_codebase`
+- `xituan_app_customer/submodules/xituan_codebase`
+- `xituan_app_merchant/submodules/xituan_codebase`
 
 **每个条目开始前**：在**对应主仓库根**（如处理 `xituan_cms/submodules/...` 前先在 `xituan_cms/`）做「整 repo 跳过」判定；若跳过，**本条目不进入子模块**，直接进入下一主项目。
 
@@ -188,9 +193,9 @@ git push origin master
 
 ---
 
-### 阶段 3 — **五个主项目**（主仓库根目录，非子模块内）
+### 阶段 3 — **七个主项目**（主仓库根目录，非子模块内）
 
-对 **`xituan_backend`、`xituan_cms`、`xituan_platform`、`xituan_site`、`xituan_wechat_app`** 各仓库根目录：
+对 **`xituan_backend`、`xituan_cms`、`xituan_platform`、`xituan_site`、`xituan_wechat_app`、`xituan_app_customer`、`xituan_app_merchant`** 各仓库根目录：
 
 **每个主仓库开始前**：在该主仓库根目录**再次**按「主仓库无待同步」全文判定（建议含 `git fetch origin master`；条件与阶段 2 入口一致）。若仍为 **整 repo 跳过**，则**跳过**本阶段该目录的全部步骤，下一主项目。（阶段 2 若曾对该主项目执行子模块 pull 并导致主仓出现 `submodules/xituan_codebase` 等变更，通常此处**不应**再判定为跳过。）
 

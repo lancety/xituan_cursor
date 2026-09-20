@@ -52,7 +52,7 @@ If unsure, **default to phased plan + ledger entry** rather than a single big-ba
 | Will any **released** client break without the change? | Yes → Phase 1 must stay compatible |
 | Is there a DB change old code cannot tolerate? | Yes → Phase 1 additive only |
 
-Grep consumers across: `xituan_wechat_app`, `xituan_site`, `xituan_cms`, `xituan_platform`, external docs.
+Grep consumers across: `xituan_wechat_app`, `xituan_site`, `xituan_cms`, `xituan_platform`, `xituan_app_customer`, `xituan_app_merchant`, external docs.
 
 ### Step 2 — Split phases
 

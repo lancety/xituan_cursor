@@ -1,0 +1,25 @@
+---
+description: Do not auto-start npm/dev servers or Cursor Tasks from chat; developer restarts manually
+alwaysApply: true
+---
+
+# Manual-only npm / Cursor Task restarts
+
+Long-running processes defined via **npm scripts** or **Cursor/VS Code Tasks** (e.g. `npm run dev`, `npm start`, Expo Metro, `npm run im:up`) must be started and restarted **only by the developer**.
+
+## Forbidden (unless the user explicitly asks in this turn)
+
+- `npm run dev` / `npm start` / `npm run <long-running>` for backend, CMS, Site, Expo apps, etc.
+- Starting or re-running Cursor **Tasks** that wrap those scripts (`Executing task: npm run …`)
+- Background Shell that keeps a server/watcher alive “to unblock” diagnosis (e.g. free port then `npm run dev`)
+- Spawning a second instance when one may already be running (causes `EADDRINUSE`, e.g. backend `:3050`)
+
+## Allowed
+
+- One-shot commands: tests, builds, `tsc`, migrations **only when permitted by other rules**, curls, git, file edits
+- Tell the developer to restart their existing Task/terminal (name the command and why)
+- If a port is busy: report the PID / how to `taskkill`; do **not** kill-and-restart the server yourself unless the user explicitly asks
+
+## When code needs a process restart
+
+Say briefly what changed and ask the developer to restart the relevant Task (e.g. “请手动重启 backend 的 `npm run dev`”). Do not start it from the agent chat.

@@ -6,7 +6,7 @@ description: >-
   apps that use new or changed exports, avoid treating every consumer submodule as
   in-scope by default. Use when adding or modifying shared types, enums, utils, API
   contracts, or any file under xituan_codebase and follow-up work in backend/cms/
-  platform/site/wechat. For git pull/push order across all repos, use
+  platform/site/wechat/customer/merchant apps. For git pull/push order across all repos, use
   xituan-multirepo-codebase-sync instead; this skill does not replace that workflow.
 ---
 
@@ -19,7 +19,7 @@ description: >-
 
 ## What this skill is not
 
-- **Not** the submodule pull/commit/push procedure across all five apps. For that, read and follow **`xituan-multirepo-codebase-sync`** when the user asks to push, align everything, or run the full chain.
+- **Not** the submodule pull/commit/push procedure across all seven apps. For that, read and follow **`xituan-multirepo-codebase-sync`** when the user asks to push, align everything, or run the full chain.
 
 ## Single source of truth (avoid redundant edits)
 
@@ -30,7 +30,7 @@ description: >-
 ## Before changing shared code
 
 1. **Name the public surface** you will add or change (exported symbols, DTO shapes, enum values, shared endpoints/constants).
-2. **Find real consumers** in this monorepo (not assumed “all five”):
+2. **Find real consumers** in this monorepo (not assumed “all seven”):
    - Search imports and paths, e.g. `@shared/`, `@xituan_codebase/`, `submodules/xituan_codebase`, re-exports from codebase into app `src/`.
    - Prefer **usage evidence** (import sites, API clients, serializers) over directory guesses.
 3. **Classify the change**:
@@ -53,6 +53,8 @@ description: >-
 | `xituan_platform` | When platform features import shared contracts or UI from codebase |
 | `xituan_site` | When site imports `@xituan_codebase/*` or submodule paths |
 | `xituan_wechat_app` | When mini-program shares types/utils from codebase |
+| `xituan_app_customer` | Expo customer: OpenIM / push / shared enums & utils via submodule |
+| `xituan_app_merchant` | Expo merchant: same pattern as customer |
 
 Treat any row as **out of scope** until search shows an import or build dependency.
 

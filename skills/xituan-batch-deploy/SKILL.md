@@ -5,8 +5,9 @@ description: >-
   multirepo sync to origin/master, then checkout production → align with master →
   push origin production → checkout master. Keywords: 批量部署, batch deploy. If the user
   names repos, only those; if none named, all deployable main repos (skip repos with no
-  production branch for the production push step). Uses xituan-multirepo-codebase-sync
-  rules for stash/master/commit messages.
+  production branch). Expo apps have a Git `production` branch for store/EAS prod config;
+  `push origin production` still does not publish the store binary (EAS Build/Submit does).
+  Uses xituan-multirepo-codebase-sync rules for stash/master/commit messages.
 ---
 
 # Xituan 批量部署（batch deploy）
@@ -19,15 +20,16 @@ description: >-
 
 | 用户说法 | 范围 |
 |----------|------|
-| 未提具体 repo | **全部**可部署主仓：`xituan_backend`、`xituan_cms`、`xituan_platform`、`xituan_site`、`xituan_wechat_app` |
+| 未提具体 repo | **全部**可部署主仓：`xituan_backend`、`xituan_cms`、`xituan_platform`、`xituan_site`、`xituan_wechat_app`、`xituan_app_customer`、`xituan_app_merchant` |
 | 点名 repo（如「只做 cms 和 site」） | **仅**点名的主仓 |
 
 **非主仓 / 无 production：**
 
 - `xituan_agent`、`.cursor`（`xituan_cursor`）：**不参与** production 推送；仅当用户明确要求或全量 multirepo sync 时走 `xituan-multirepo-codebase-sync` 的 agent/cursor 阶段。
-- 某主仓**没有**本地/远程 `production` 分支：该仓**跳过** production 步骤，在报告中写明「无 production，已忽略」。
+- 某主仓**没有**本地/远程 `production` 分支：该仓**跳过** production 步骤，在报告中写明「无 production，已忽略」。**不要**为跳过的仓新建 `production`（除非用户本回合明确要求建分支）。
+- **`xituan_app_customer` / `xituan_app_merchant`**：与其它主仓一样走阶段 1 的 **master + codebase** 对齐，**并且**走阶段 2 的 `merge master` + `push origin production`。`production` 存放商店/EAS 生产配置（如 `eas.json` `build.production.env.EXPO_PUBLIC_APP_ENV=production`、生产包 `usesCleartextTraffic: false`、客户 App 仅生产 associatedDomains）。**合并冲突**时优先保留这些 production 侧配置，再纳入 master 业务改动。真正上架仍是 **EAS Build/Submit**（见 `xituan_agent/devGuide/planned-work/entries/2026-09-app-release-update-flow.md`）；`push origin production` **不会**自动把包打到商店。
 
-别名：`cms`→`xituan_cms`，`site`→`xituan_site`，`backend`→`xituan_backend`，`platform`→`xituan_platform`，`wechat`→`xituan_wechat_app`。
+别名：`cms`→`xituan_cms`，`site`→`xituan_site`，`backend`→`xituan_backend`，`platform`→`xituan_platform`，`wechat`→`xituan_wechat_app`，`customer` / `app_customer`→`xituan_app_customer`，`merchant` / `app_merchant`→`xituan_app_merchant`。
 
 ---
 
@@ -76,9 +78,10 @@ git checkout master
 
 **规则：**
 
-- **禁止**对无 `production` 的仓强行创建/推送 production（除非用户明确要求建分支）。
+- **禁止**对无 `production` 的仓强行创建/推送 production（除非用户明确要求建分支）。Expo 两 App 已有 `production` 时**必须**走本阶段，不得再当「无 production」跳过。
 - **禁止** `push --force` 到 `production`（除非用户明确要求）。
 - merge 冲突：在该仓解决后继续；无法安全解决则 **STOP** 并交用户，**不要**留在 production 不管。
+- Expo App：`eas.json` 的 `build.production.env`、生产 `app.json` 的 cleartext / associatedDomains 与 master 不一致时，**保留 production 文件中的生产值**。
 - 每个仓结束后必须回到 **`master`**（`git rev-parse --abbrev-ref HEAD` = `master`）。
 
 ### 3 — 收尾报告

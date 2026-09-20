@@ -1,0 +1,38 @@
+---
+description: Local Android Dev Client builds for Expo apps (preferred over EAS during active development).
+alwaysApply: true
+---
+
+# Local Android builds (Expo apps)
+
+## Preference (developer decision)
+
+During active development with frequent native/config changes, **prefer one local USB build command**:
+
+- Customer / Merchant: `npm run build:local:android` only
+  - Requires USB device already in `adb devices` (`device` state)
+  - prebuild → assembleDebug (arm64-v8a) → **adb install** in the same script
+  - Do **not** add a separate `install:local:android` npm script / Cursor task
+
+Do **not** default to bare `expo run:android --device` (multi-ABI; often crashes CMake/ninja on Windows).
+
+`android/` is wiped only when the native fingerprint changes (`app.json` / icons / plugins / lockfile) or `XITUAN_ANDROID_FORCE_CLEAN=1`. Routine rebuilds keep `android/` so Windows does not hit Gradle leftover file locks from deleting the previous tree. Do **not** call `gradlew --stop` / kill all Gradle daemons (shared user home — stops the other app’s concurrent build). Wipe path may kill only `java.exe` whose command line contains this app’s work-copy path; if delete still fails, rename to `android.__stale_*` and continue.
+
+If `:expo-*:generateDebugResValues` fails with bare `NullPointerException` on Windows: Cursor is locking Gradle outputs under the workspace `node_modules`. `build:local:android` syncs to a short path outside Cursor watch (`C:\xt\m` merchant / `C:\xt\c` customer) — short roots also avoid CMake/ninja MAX_PATH 260. First run copies `node_modules` (slow); later runs reuse it unless lockfile changes.
+
+If `:expo-modules-core:buildCMakeDebug` fails with `FindFirstFileExA` / clang signal: ensure arm64-only + retry `build:local:android`.
+
+Metro reload does **not** apply native config-plugin changes.
+
+## Machine toolchain
+
+| Var | Value |
+|-----|--------|
+| `ANDROID_HOME` / `ANDROID_SDK_ROOT` | `C:\Users\lance\AppData\Local\Android\Sdk` |
+| `JAVA_HOME` | `C:\Program Files\Microsoft\jdk-17.0.20.101-hotspot` |
+
+## Agent constraints
+
+- Do **not** auto-start long-running builds unless the user asks.
+- Keep customer/merchant `usesCleartextTraffic` + `buildArchs: ["arm64-v8a"]` aligned.
+- Keep a **single** local Android npm script that builds and installs over USB.
