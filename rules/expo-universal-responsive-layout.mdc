@@ -1,0 +1,67 @@
+---
+description: Expo merchant/customer — single Universal App + responsive breakpoints (no separate tablet apps).
+globs: xituan_app_*/src/**/*.{tsx,ts}
+alwaysApply: false
+---
+
+# Expo apps: Universal + responsive layout (hard)
+
+Applies to **`xituan_app_merchant`** and **`xituan_app_customer`** only.
+
+## Chosen delivery model
+
+**One App per product** (iOS + iPadOS + Android), **responsive layout** via breakpoints / column count / optional content max-width.
+
+| Do | Do not |
+|----|--------|
+| Single Expo project per app; Universal iPhone+iPad | Separate phone vs tablet App Store binaries |
+| Shared screens + `ResponsiveCardGrid` / width-driven columns | Hardcode `width: '48%'` / single-column image grids on phone |
+| `useWindowDimensions` / `onLayout` for available width | Assume phone-only (~390pt) when building lists/cards |
+| Prefer readable density (min card ~168, max ~4 cols) | Pack as many columns as possible on iPad landscape |
+
+Defer a full “tablet shell” (persistent sidebar + split panes) until product asks for it — still **one App**, not a second target.
+
+## Do not copy phone-only references as the wide-layout source of truth
+
+When the work **involves layout** (lists, grids, forms, sheets, split panes, max content width), **do not** treat existing implementations as sufficient for iPad / large Android just because they “match reference”:
+
+| Reference | Typical width assumption |
+|-----------|--------------------------|
+| WeChat mini-program | Phone only |
+| CMS / Site **mobile** mode | Phone only — not tablet / wide breakpoints |
+
+**Required:** before implementing or porting layout from those sources, **ask the developer** whether this screen needs **explicit tablet / wide consideration** (columns, content max-width, denser chrome, etc.), instead of silently cloning phone layout.
+
+- Business / interaction parity with WeChat or CMS is still fine to follow.
+- **Visual grid / width / chrome density on large screens** is a separate decision — confirm when unsure.
+
+## Image / activity / product card grids
+
+Reuse each app’s `ResponsiveCardGrid` + `RESPONSIVE_CARD_GRID` (keep merchant ↔ customer constants aligned):
+
+- `MIN_COLUMNS = 2` (phone)
+- `MIN_CARD_WIDTH ≈ 168`, `GAP = 10`, `MAX_COLUMNS = 4`
+- Card root width `100%` **inside** grid cells (do not nest another `%` column)
+
+```tsx
+// BAD — phone-only 2-up, ignores iPad
+<View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' }}>
+  <Card style={{ width: '48%' }} />
+</View>
+
+// GOOD
+<ResponsiveCardGrid
+  items={rows.map((row) => ({
+    key: row.id,
+    node: <Card {...row} /> // card width: '100%'
+  }))}
+/>
+```
+
+## Checklist before shipping UI
+
+- [ ] If layout was ported from WeChat / CMS / Site mobile: asked whether tablet / wide needs separate treatment
+- [ ] Phone portrait: ≥2 columns for image-card grids
+- [ ] Tablet / wide: more columns without tiny unreadable tiles
+- [ ] Forms / detail: readable line length (consider max content width / padding), not stretched edge-to-edge on iPad
+- [ ] No new “iPad-only app” or duplicate layout tree unless explicitly requested
