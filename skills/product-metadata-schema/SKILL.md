@@ -29,7 +29,7 @@ description: >-
 - **`products.metadata`** (jsonb): validation, migration, typing, APIs.
 - **Platform** templates: industry → domain; platform parent → child **attribute definitions**.
 - **Merchant** categories: parent/child **catalog tree** (`Category.parentId` **only** means merchant merchandising—not “industry”). **In-store** navigation/facets may use this tree; **global** catalog facets use **`platform_category_id`** (+ `domain_id`), not merchant-only names (see framework §1–§2).
-- **Binding (snapshot on merchant parent / binding carrier)**: `platform_domain_id`, optional **`platform_category_id`** (platform parent **or** child—single FK), `binding_status`, `mapping_version`. **Wizard/tasks/audit** live in **separate tables** (hybrid model—framework §5.1, phased plan P3-1).
+- **Binding (snapshot on the binding root only)**: `parent_id` is null and `platform_domain_id` or optional **`platform_category_id`** is set. Do not copy those ids onto merchant children. Ownership, cascade, and dirty-data rules: skill [`metadata-category-inheritance`](../metadata-category-inheritance/SKILL.md) and [`metadata-category-ownership-binding.md`](../../../xituan_agent/devGuide/metadata-category-ownership-binding.md). **Wizard/tasks/audit** live in **separate tables** (hybrid model—framework §5.1, phased plan P3-1).
 - **CMS**: dynamic metadata form, migration wizard, category metadata admin.
 - **Print**: `entityFields` + `metadata.<jsonKey>` paths; preview `sampleData`.
 - **Cache**: `schemaVersion` / Redis / ETag—**after Phase 3** per phased plan; until then correctness-first (framework §11).
@@ -181,7 +181,7 @@ Input: **`merchantId`**, product **`categoryId`** (leaf subcategory typical).
 1. First bind to a platform template **must open migration wizard**—**no “bind and skip mapping.”**
 2. If **manual mapping** or **blocking conflicts** (e.g. **type mismatch**) remain → stay **`BOUND_NO_MAP`** until resolved for strict paths (`entityFields`, merge).
 3. While **`BOUND_NO_MAP`**: **do not block product save** by default; **degrade global enum facets** per product decision; **ENUM diffs**: **prompt + auto-map** in Phase 3 (not primary hard-block); **required** mismatches: **Phase 3 must ship explicit merge rule + detection** (phased plan P3-3; framework §5.3).
-4. **Merchant category tree rules** when using platform nodes (framework §3): **platform child bind** → **merchant cannot reparent** away from platform-implied parent chain; **platform parent bind** → **that node’s domain locked to default**; children inherit `domain_id`.
+4. **Merchant children do not store platform ids.** Parent bind and unbind clear descendants’ `platform_domain_id`, `platform_category_id`, and set `binding_status` to `UNBOUND`. Effective schema reads platform ids from the binding root only. See [`metadata-category-inheritance`](../metadata-category-inheritance/SKILL.md).
 
 **Artifacts**
 
