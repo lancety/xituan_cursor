@@ -21,7 +21,7 @@ A row **owns a platform binding** only when `parent_id` is null and `platform_do
 - Treat a child’s `platform_domain_id` as a binding. Parent bind must not copy the domain id onto descendants.
 - Update `binding_status` from migration create, complete, rollback, or `markCategoryBindingMapped` unless `parent_id IS NULL` and `platform_domain_id IS NOT NULL`.
 - Infer the ownership radio from `binding_status`. `parent_id` wins; platform ids are checked only when there is no merchant parent.
-- Run unbind schema copy (`COPY_SCHEMA_TO_MERCHANT`) when the row has a merchant parent. Copy only when this row owns a platform binding and the save leaves platform binding.
+- Run a full unbind schema copy when the save moves a binding root under a known merchant parent. Copy only merged fields whose key is absent from that parent's complete schema. Shared keys stay inherited.
 - Insert unbind copies as `MERCHANT_PARENT_CATEGORY` on a category that still has `parent_id`. The editor lists `MERCHANT_SUB_CATEGORY` only; the hidden parent-scope rows collide on `(merchant_id, scope_type, scope_id, storage_key)` after a later platform bind.
 - Count child rows in platform domain or platform category delete guards. Filter `parent_id IS NULL`.
 - Assume a merchant child inherits the matching **platform** subcategory’s attributes. Merge uses the binding root’s platform category chain, the root’s merchant attributes, then the child’s own `MERCHANT_SUB_CATEGORY` rows.
@@ -30,7 +30,7 @@ A row **owns a platform binding** only when `parent_id` is null and `platform_do
 
 - Platform bind clears `parent_id` and flips that category’s attribute scope from sub to parent.
 - Parent bind and parent unbind both clear descendants: `platform_domain_id`, `platform_category_id`, and `binding_status = UNBOUND`.
-- Saving “hang under merchant parent” or “no ownership” clears this row’s platform ids and sets `UNBOUND`, with no schema copy.
+- Saving “hang under merchant parent” or “no ownership” clears this row’s platform ids and sets `UNBOUND`. A binding root moving under a known parent copies only fields the parent schema does not already contain. Leaving platform with no parent still copies the full merged schema.
 - `MANUAL` and `OVERLAY` rows keep their definition and `origin_tag` when a real unbind copy runs. New platform-layer rows are `FORK_FROM_PLATFORM`. Do not rewrite product jsonb in that copy.
 
 ## Before finishing a change
