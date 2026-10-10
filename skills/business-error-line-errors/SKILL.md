@@ -61,5 +61,6 @@ Use `COLLECTION_UMBRELLA_CODES` from `business-error-line.enum.ts` (includes `OR
 ## Related
 
 - Rule: `.cursor/rules/business-error-response.mdc`
+- DevGuide: `xituan_agent/devGuide/cross-client-business-error-handling.md`
 - Scope: `.cursor/skills/xituan-codebase-change-scope/SKILL.md`
 - Sync: `.cursor/skills/xituan-multirepo-codebase-sync/SKILL.md`
