@@ -3,7 +3,9 @@ name: xituan-multirepo-codebase-sync
 description: >-
   Syncs the shared xituan_codebase Git submodule across xituan_backend, xituan_cms,
   xituan_platform, xituan_site, xituan_wechat_app, xituan_app_customer, and
-  xituan_app_merchant using a fixed order: backend codebase first (when not skipped),
+  xituan_app_merchant using a fixed order: quality gates (wechat preupload:check +
+  backend/cms/platform/site tsc_lint) run twice—once before any Git work and once after
+  all branch/Git stages finish—then backend codebase first (when not skipped),
   then six consumer codebases (when each parent main is not skipped), then seven main
   repos, xituan_agent, and xituan_cursor (.cursor). Per main repo: if the main repo has
   nothing to sync (clean, on master, aligned with origin/master), skip that entire project—no
@@ -137,7 +139,52 @@ description: >-
 
 ## 固定执行顺序（必须遵守）
 
-整体顺序：**① backend 子模块 codebase（可跳过）→ ② 其余 6 个子模块 codebase（按主项目逐个可跳过）→ ③ 7 个主仓库（逐个可跳过）→ ④ xituan_agent → ⑤ xituan_cursor（`.cursor`）**。
+整体顺序：**⓪ 质量门禁（起点）→ ① backend 子模块 codebase（可跳过）→ ② 其余 6 个子模块 codebase（按主项目逐个可跳过）→ ③ 7 个主仓库（逐个可跳过）→ ④ xituan_agent → ⑤ xituan_cursor（`.cursor`）→ ⑥ 质量门禁（分支工作结束后再跑一遍）**。
+
+---
+
+## 质量门禁（强制，整轮跑两次）
+
+在**任何**阶段 1–5 的 Git 操作之前跑一遍（**阶段 0 / 起点**）；在阶段 1–5 **全部完成后**再跑一遍（**阶段 6 / 分支工作结束**）。两次命令集合相同，任一次失败都 **STOP**，修好并复跑该次门禁通过后才可继续（起点失败则不得进入 Git；结束失败则不得向用户报告同步完成）。
+
+### 命令（顺序固定；可并行启动各仓，但须等全部结束后再判定）
+
+| 仓库 | 命令 |
+|------|------|
+| `xituan_wechat_app` | `npm run preupload:check` |
+| `xituan_backend` | `npm run tsc_lint` |
+| `xituan_cms` | `npm run tsc_lint` |
+| `xituan_platform` | `npm run tsc_lint` |
+| `xituan_site` | `npm run tsc_lint` |
+
+```bash
+# WeChat
+cd xituan_wechat_app && npm run preupload:check
+
+# TS / lint (each repo root)
+cd xituan_backend && npm run tsc_lint
+cd xituan_cms && npm run tsc_lint
+cd xituan_platform && npm run tsc_lint
+cd xituan_site && npm run tsc_lint
+```
+
+### 判定
+
+- **exit ≠ 0**（含 TypeScript error、ESLint error、segfault 等）：视为失败 → **先修复** → 对失败仓复跑直到通过 → 再继续流程。
+- **仅 Warning、exit 0**：视为通过，不强制清 warning。
+- **子集同步**：用户点名主仓时，只对点名范围内且上表列出的仓跑对应检查（例如只 sync cms+backend → 跑 backend/cms `tsc_lint`，不跑 wechat/platform/site；点名含 wechat → 跑 `preupload:check`）。全量 sync 时上表五仓**全部**必跑。
+- **不在上表的仓**（`xituan_app_customer`、`xituan_app_merchant`、`xituan_agent`、`.cursor`）：本门禁不要求额外命令。
+- 阶段 6 再次失败时：修复后**只复跑阶段 6**（不必重跑阶段 0），通过后再收尾报告。
+
+### 阶段 0 — 起点门禁
+
+在生成 `$STASH_TAG`、进入任一仓库 `pull` / `commit` / `push` **之前**执行本节命令。失败则 **STOP**，不得进入阶段 1。
+
+### 阶段 6 — 分支工作结束后门禁
+
+阶段 5（或本轮最后执行的 Git 阶段）完成后执行本节同一套命令。失败则 **STOP**，不得声称 multirepo sync 已完成。
+
+---
 
 ### 阶段 1 — Codebase：仅从 `xituan_backend` 子模块开始
 
@@ -271,6 +318,7 @@ git push origin master
 
 ## 实施检查清单
 
+- [ ] **阶段 0（起点门禁）**：范围内 `xituan_wechat_app` `preupload:check` 与 backend/cms/platform/site `tsc_lint`（按子集）已通过；失败已修复后再进 Git
 - [ ] **每个**实际参与同步的仓库路径：已进入 **`master`**，否则已 `checkout master` 成功；失败则已 **终止**并交用户手动处理。
 - [ ] **整 repo 跳过**：已按「主仓库无待同步」跳过者，**未**对其执行阶段 1/2/3 中对应段落；未跳过者已完整执行。
 - [ ] **Stash**：仅创建/恢复/丢弃带**本轮** `$STASH_TAG` 的条目；未创建 stash 的目录未执行 `pop`；未对历史 `stash@{n}` 做无参 `stash pop`。
@@ -279,6 +327,7 @@ git push origin master
 - [ ] 阶段 3：对 **未**跳过的主项目已 **默认**将主仓工作区变更与子模块指针 **一并** `commit` + **`push origin master`**（除非用户明确「仅 bump 子模块」）；**`xituan_wechat_app`** 已在 commit 前执行 `sync:wechat-main-constants` + verify（若 applicable）
 - [ ] 阶段 4：`xituan_agent` 在 **`master`** 上已 commit + `push origin master`（若有文档变更；无待同步时可跳过）
 - [ ] 阶段 5：`.cursor` / **`xituan_cursor`** 在 **`master`** 上已 **最后** commit + `push origin master`（若有 rules/skills/plans 变更；无待同步时可跳过）
+- [ ] **阶段 6（结束门禁）**：与阶段 0 同一套检查再次通过后，才可报告同步完成
 - [ ] 所有 **`git commit` message** 符合「Commit message 约束」：**无** Cursor 相关备注或元信息
 - [ ] 全程冲突已由 AI 解决；各**实际执行过**的目标仓库 `git status` 干净且与 `origin/master` 一致（或符合团队分支策略）
 

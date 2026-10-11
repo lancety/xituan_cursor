@@ -1,13 +1,14 @@
 ---
 name: xituan-batch-deploy
 description: >-
-  Batch-deploys xituan multi-repos: tsc_lint (cms/site when in scope), confirm master,
-  multirepo sync to origin/master, then checkout production → align with master →
+  Batch-deploys xituan multi-repos: confirm master, multirepo sync to origin/master
+  (sync skill runs wechat preupload:check + backend/cms/platform/site tsc_lint twice—
+  start and after Git stages), then checkout production → align with master →
   push origin production → checkout master. Keywords: 批量部署, batch deploy. If the user
   names repos, only those; if none named, all deployable main repos (skip repos with no
   production branch). Expo apps have a Git `production` branch for store/EAS prod config;
   `push origin production` still does not publish the store binary (EAS Build/Submit does).
-  Uses xituan-multirepo-codebase-sync rules for stash/master/commit messages.
+  Uses xituan-multirepo-codebase-sync rules for stash/master/commit messages and quality gates.
 ---
 
 # Xituan 批量部署（batch deploy）
@@ -35,22 +36,22 @@ description: >-
 
 ## 固定阶段（必须按序）
 
-### 0 — 前置 lint（有 TS 前端仓时）
+### 0 — 质量门禁（由 multirepo sync 执行，整轮两次）
 
-对范围内的 **`xituan_cms`** / **`xituan_site`**（若在范围内）：
+**不要**在本技能里单独再跑一遍 cms/site-only lint。进入阶段 1 时 **必须**遵循 `xituan-multirepo-codebase-sync` 的 **阶段 0 + 阶段 6** 质量门禁：
 
-```bash
-cd <repo>
-npm run tsc_lint
-```
+| 仓（在范围内时） | 命令 |
+|------------------|------|
+| `xituan_wechat_app` | `npm run preupload:check` |
+| `xituan_backend` / `xituan_cms` / `xituan_platform` / `xituan_site` | `npm run tsc_lint` |
 
-- **错误（exit ≠ 0）**：先修复再继续；修完复跑直到通过。
-- **仅 Warning、exit 0**：视为通过，不强制清 warning。
-- 范围内无 cms/site：跳过本阶段。
+- **起点（sync 阶段 0）**：任何 Git 之前；失败则 **STOP**，修好再继续。
+- **结束（sync 阶段 6）**：master 侧 Git 全部完成后、进入本技能「阶段 2 production」之前；失败则 **STOP**，修好再推 production。
+- **仅 Warning、exit 0**：通过。子集部署只跑范围内上表所列仓。
 
 ### 1 — 确认 `master` + multirepo sync（仅范围内仓）
 
-**先读并遵循** `.cursor/skills/xituan-multirepo-codebase-sync/SKILL.md`：
+**先读并遵循** `.cursor/skills/xituan-multirepo-codebase-sync/SKILL.md`（含阶段 0/6 质量门禁）：
 
 - 每个 Git 路径必须在 **`master`**（失败则 **STOP**）。
 - Stash 仅用本轮 `$STASH_TAG`；commit message **禁止** Cursor 相关字样。
@@ -59,6 +60,7 @@ npm run tsc_lint
   - 若子集含 backend：仍按 sync 技能阶段 1→2→3 对该子集执行。
 - 主仓默认：`git add -A` → commit（若有）→ **`git push origin master`**。
 - 干净且已与 `origin/master` 一致：可跳过该仓 commit/push。
+- Sync 阶段 6 通过后，再进入本技能阶段 2（production）。
 
 ### 2 — production 推送（逐仓）
 
@@ -97,7 +99,7 @@ git checkout master
 ## 检查清单
 
 - [ ] 范围已解析（全量或用户点名）
-- [ ] cms/site（若在范围内）`tsc_lint` 已通过
+- [ ] Sync 阶段 0 / 阶段 6：范围内 wechat `preupload:check` + backend/cms/platform/site `tsc_lint` 均已通过
 - [ ] 范围内仓已在 master 完成 sync + `push origin master`（或跳过）
 - [ ] 有 production 的仓已 `merge master` + `push origin production` + 回到 master
 - [ ] 无 production 的仓已跳过并说明
