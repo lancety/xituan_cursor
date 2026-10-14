@@ -21,7 +21,7 @@ description: >-
 
 改列表、分页、「从详情返回跳顶」、或把 `ScrollView`+`map` 当长列表前 **先读本 skill**。
 
-Related（不替代本 skill）：列表→详情转场手感见 `list-to-detail-smooth-transition`；IM 倒置列表见 `openim-client-scroll-interaction`。
+Related（不替代本 skill）：列表→详情数据路径见 `list-to-detail-smooth-transition`；过场掉帧/渲染预算见 `page-transition-render-budget`；IM 倒置列表见 `openim-client-scroll-interaction`。
 
 ---
 
