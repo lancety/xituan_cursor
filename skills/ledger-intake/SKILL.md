@@ -52,8 +52,8 @@ Read **`xituan_agent/devGuide/ledger-intake/README.md`** for the product flow an
 | Piece | Path |
 |-------|------|
 | CMS page | `xituan_cms/src/pages/financial/ledger-intake.tsx` |
-| Local draft | `ledger-intake-local-cache.util.ts` |
-| Client PUT | `ledger-intake-s3.util.ts` |
+| Local draft | `xituan_cms/src/utils/ledger-intake-local-cache.util.ts` |
+| Client PUT | `xituan_cms/src/utils/ledger-intake-s3.util.ts` |
 | Analyze | `bank-ledger-analyze.util.ts` / `commerce-ledger-analyze.util.ts` |
 | Currency gate | `ledger-source-currency.util.ts` |
 | Auto books map | `xituan_backend/src/domains/financial/utils/ledger-intake-books.util.ts` |
