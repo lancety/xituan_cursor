@@ -22,7 +22,7 @@ Read **`xituan_agent/devGuide/merchant-currency/README.md`** before changing cur
 | 计入账目汇总 | `blockCurrency !== merchantCurrency` |
 | 不计入 | Same currency (today AUD–AUD): recon only, **manual** management records |
 | Auto books | Counted-in block: ≤1 revenue/expense **per type** if amount > 0 after FX; delete block → cascade cleanup |
-| FX for posting books | **Per-block** `fxToMerchant` = merchant units **per 1 source unit** (e.g. 0.21 → 1 RMB = A$ 0.21) |
+| FX for posting books | Stored `fxToMerchant` = merchant units **per 1 source unit**. Intake UI asks source units per 1 merchant unit (e.g. 1 AUD = 4.76 RMB → enter 4.76) and **inverts** before save |
 | FX on tax overlay | Separate **FY** `fxCnyToAud` — display/sidecar only; **must not** be a second write into `revenues`/`expenses` |
 
 Timezone (`platform`/`merchant` settings IANA) is **not** currency. Do not reuse timezone as a currency switch.
