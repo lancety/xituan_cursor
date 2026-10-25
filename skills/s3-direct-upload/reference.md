@@ -80,6 +80,7 @@ AWS SDK v3.729+ 会把 CRC32 塞进 `PutObject`。浏览器和 Expo 的 PUT 填�
 
 ## 相关文档
 
+- [S3 桶访问 / 私有前缀](../../../xituan_agent/devGuide/s3/README.md) — CDN 匿名 GET Deny；改桶策略必看
 - [目录图直传分层](../../../xituan_agent/devGuide/catalog-image-direct-upload-standard.md)
 - [目录图台账](../../../xituan_agent/devGuide/planned-work/entries/2026-10-catalog-image-direct-upload.md)
 - [OpenIM 附件台账](../../../xituan_agent/devGuide/planned-work/entries/2026-09-openim-attachment-direct-upload.md)

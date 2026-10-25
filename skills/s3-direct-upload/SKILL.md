@@ -30,6 +30,7 @@ Forbidden:
 - Rewriting an S3 SigV4 host to `content` or `media`.
 - A second presign/PUT stack split by image vs file, or by OS.
 - A second copy of the three-step state machine in a page. Orchestration belongs in `xituan_codebase`; each app supplies a transport.
+- Serving **private** prefixes via content/media GET. Who may GET is **`s3-bucket-access`** (ledger-intake and later private keys).
 
 ## Presign signing (backend)
 
@@ -44,3 +45,8 @@ Shipped signer for expense/OTA: `s3UploadManager.getSignedPutUrl` (path-style `s
 | `s3-direct-upload-android` | Expo file PUT on Android |
 
 Customer and merchant Expo apps share **one** JS transport. The iOS and Android skills are native edge rules for that transport, not two upload products.
+
+## Related docs
+
+- `.cursor/skills/s3-bucket-access/SKILL.md` — private prefix CDN Deny / bucket policy
+- `xituan_agent/devGuide/s3/README.md` — prefix registry
