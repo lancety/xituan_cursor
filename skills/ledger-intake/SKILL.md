@@ -27,8 +27,8 @@ Read **`xituan_agent/devGuide/ledger-intake/README.md`** for the product flow an
 - [ ] **收支 vs 源头（硬性）**：流水「已绑定」= 行上有 `revenueId` / `expenseId`。源头业务单不与流水直接绑定；源头 ID 挂在收入/支出的 `sourceId`（行上可缓存 `orderId`/`summaryId`/`invoiceId` 供创建预填）。详见 README「日期金额匹配」。
 - [ ] **两阶段匹配**：有源头的类型先扫源头业务单，命中后再按 `sourceId` 扫收入/支出。有账本 → 绑定；无账本 → 可创建（预填源头）。结算特例见 README 表（确认收款金额在 revenues）。无源头类型（普通支出/董事借款）直接扫账本。
 - [ ] Date-amount：**仅不计入**块；跳过待审。触发：导入分析后、行/批量分类后、待审重新识别升类后、整理列表对 pin 行补绑。窗：订单 BEFORE 4w+3d；结算/送货/借给/向董事 AFTER 4w+3d；普通支出 BEFORE 4w+3d（只比 `total_amount`+`expense_date`，不比供应商名）。批 ≤50 且银行日跨度 ≤4w。已有账本 ID 不覆盖。重置待审不跑匹配。Local cache / 保存流水 / 数据块更新 is blocked until organize or reset if 待审 still contains classified results.
-- [ ] 持久化：匹配/编辑/IndexedDB/processed CSV **同时**保存源头 ID + 账本 ID。
-- [ ] 绑定列 UI（银行）：创建↔查看收入/支出 **只视账本有无**；查看源头 **只视有无可解析源头 ID**（与是否自动匹配命中无关）。待审不创建；`PLATFORM_PAYOUT` 只提示不创建。筛选「全部/已绑定/未绑定」在「批量操作」左侧，并过滤当前列表。电商不加绑定筛选。
+- [ ] 持久化：匹配/编辑/IndexedDB/processed CSV **同时**保存源头 ID + 账本 ID；支出匹配另存 `expenseSupplierName`（API `supplierName`）供绑定列展示。
+- [ ] 绑定列 UI（银行）：创建↔查看收入/支出 **只视账本有无**；已绑定旁提供 **取消绑定**（清账本+源头 ID，保留处理结果；不自动再匹配）。查看源头 **只视有无可解析源头 ID**。待审不创建；`PLATFORM_PAYOUT` 只提示不创建。筛选「全部/已绑定/未绑定」在「批量操作」左侧。电商不加绑定筛选。
 - [ ] `GET context` is **rules + partners + bound industry/domain ids only**. Do not dump year-wide orders, settlements, expenses, or loan-from revenues. Client analyze classifies by rules; book linking is `date-amount-matches` only.
 - [ ] Bank classify has **no IGNORE**. Non-merchant business movements are only **loan from / loan to director**. Legacy `ignore` rows/rules reopen as REVIEW; do not offer 忽略 on filters, result icons, or rule groups.
 - [ ] `epBankRowGroup` = amount sign only (income ≥0 / expense <0). **Never** set REFUND from description `refund`. Outbound refund → expense; inbound refund → revenue with `isRefund` chosen in the books editor — not inferred from bank text. Enum `REFUND` is legacy CSV only.
