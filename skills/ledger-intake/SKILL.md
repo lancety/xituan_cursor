@@ -9,7 +9,7 @@ description: >-
 
 # Ledger intake (流水入账)
 
-Read **`xituan_agent/devGuide/ledger-intake/README.md`** for the product flow and **block management** contract. Currency / FX / what “计入账目汇总” writes into revenues/expenses is **`merchant-currency`** — do not fork those rules here. Private S3 GET is **`s3-bucket-access`**.
+Read **`xituan_agent/devGuide/ledger-intake/README.md`** for the product flow and **block management** contract. Currency / FX / what “计入账目汇总” writes into revenues/expenses is **`merchant-currency`** — do not fork those rules here. Private S3 GET is **`s3-bucket-access`**. Manual「创建收支」dedupe keys are **`revenue-expense-idempotency`** — do not maintain a second full key table here.
 
 ## Before writing code
 
@@ -26,12 +26,14 @@ Read **`xituan_agent/devGuide/ledger-intake/README.md`** for the product flow an
 - [ ] Rule keyword badges on 电商数据处理规则 / 收支款规则 can be dragged onto another group to `updateRule`. All classify groups stay visible even when empty. Bank classify uses saved 收支款规则 only — **not** supplier name/aliases (aliases are OCR). Saving rules always uses batch `POST /ledger-intake/rules` `{ items }` (length 1 included). Keyword result conflicts open a list; each keyword picks its own final result before upsert.
 - [ ] **收支 vs 源头（硬性）**：流水「已绑定」= 行上有 `revenueId` / `expenseId`。源头业务单不与流水直接绑定；源头 ID 挂在收入/支出的 `sourceId`（行上可缓存 `orderId`/`summaryId`/`invoiceId` 供创建预填）。详见 README「日期金额匹配」。
 - [ ] **两阶段匹配**：有源头的类型先扫源头业务单，命中后再按 `sourceId` 扫收入/支出。有账本 → 绑定；无账本 → 可创建（预填源头）。结算特例见 README 表（确认收款金额在 revenues）。无源头类型（普通支出/董事借款）直接扫账本。
-- [ ] Date-amount：**仅不计入**块；跳过待审。触发：导入分析后、行/批量分类后、待审重新识别升类后、整理列表对 pin 行补绑。窗：订单 BEFORE 4w+3d（锚点=`createdAt` 下单日；支付方式 cover `cash`+`bank_transfer`；不用 `paidAt`）；结算/送货/借给/向董事 AFTER 4w+3d；普通支出 BEFORE 4w+3d（只比 `total_amount`+`expense_date`，不比供应商名）。批 ≤50 且银行日跨度 ≤4w。已有账本 ID 不覆盖。重置待审不跑匹配。Local cache / 保存流水 / 数据块更新 is blocked until organize or reset if 待审 still contains classified results.
+- [ ] Date-amount：**仅不计入**块；跳过待审。触发：导入分析后、行/批量分类后、待审重新识别升类后、整理列表对 pin 行补绑。窗：订单 BEFORE 4w+3d（锚点=`createdAt` 下单日；支付方式 cover `cash`+`bank_transfer`；不用 `paidAt`）；结算/送货/借给/向董事 AFTER 4w+3d；普通支出 BEFORE 4w+3d（`receipt_total_amount` 或 `total_amount`，优先单据额；不比供应商名）。批 ≤50 且银行日跨度 ≤4w。已有账本 ID 不覆盖。重置待审不跑匹配。Local cache / 保存流水 / 数据块更新 is blocked until organize or reset if 待审 still contains classified results.
+- [ ] 创建幂等：稳定 UUID `clientId`；打开创建时预填 bank_row / `source_reference`；**禁止**手工写 `ledger_block_id`。完整键表与服务端查重见 **`revenue-expense-idempotency`** skill + [devGuide](../../xituan_agent/devGuide/revenue-expense-idempotency/README.md)。
 - [ ] 持久化：匹配/编辑/IndexedDB/processed CSV **同时**保存源头 ID + 账本 ID；支出匹配另存 `expenseSupplierName`（API `supplierName`）供绑定列展示。
-- [ ] 绑定列 UI（银行）：创建↔查看收入/支出 **只视账本有无**；手工创建成功回调须写回 `revenueId`/`expenseId`（订单有源无账本 → 创建后变查看收入，保留 `orderId`）。已绑定旁 **取消绑定**。支出绑定可带 `expenseSupplierName`。待审不创建；`PLATFORM_PAYOUT` 只提示。筛选「全部/已绑定/未绑定」在批量左侧。电商不加绑定筛选。
+- [ ] 绑定列 UI（银行）：未绑定时 **创建收支** + **绑定收支**（按行分类打开已有收入/支出列表，选中写回 `revenueId`/`expenseId`）；已绑定只视账本有无显示查看；手工创建成功回调须写回账本 ID（订单有源无账本 → 创建后变查看收入，保留 `orderId`）。已绑定旁 **取消绑定**。支出绑定可带 `expenseSupplierName`。待审不创建/绑定；`PLATFORM_PAYOUT` 只提示。筛选「全部/已绑定/未绑定」在批量左侧。电商不加绑定筛选。
 - [ ] `GET context` is **rules + partners + bound industry/domain ids only**. Do not dump year-wide orders, settlements, expenses, or loan-from revenues. Client analyze classifies by rules; book linking is `date-amount-matches` only.
 - [ ] Bank classify has **no IGNORE**. Non-merchant business movements are only **loan from / loan to director**. Legacy `ignore` rows/rules reopen as REVIEW; do not offer 忽略 on filters, result icons, or rule groups.
-- [ ] `epBankRowGroup` = amount sign only (income ≥0 / expense <0). **Never** set REFUND from description `refund`. Outbound refund → expense; inbound refund → revenue with `isRefund` chosen in the books editor — not inferred from bank text. Enum `REFUND` is legacy CSV only.
+- [ ] `epBankRowGroup` default = amount sign (income ≥0 / expense <0). Row Select may set **REFUND** manually (never from description). On REFUND: reverse commercial result-icon disables (credit → expense recovery; debit → income reverse); **REVIEW** always on; director loan icons off. Persist group through rematch/CSV.
+- [ ] **退款落账**（与收入/支出管理同符号：正常正 / 退款负，加总自然对冲）：REFUND + 正数 → `ExpenseRefundModal`（`is_refund`，金额存负）；REFUND + 负数 → `RevenueEditModal`（`isRefund`，金额存负，单据可空）。列表金额旁 badge-btn orange「退款」。正常 `ExpenseEditModal` 不承载退款 UI。银行流水正负 ≠ 账本正负。日期金额匹配**跳过** `group=REFUND`；`listExpensesForDateAmount` 仅 `is_refund=false`（原成本）。
 - [ ] Bank list: batch-migrate row under 已选, same columns as the table. Empty date/amount = current-list min/max; empty group = no group filter; description = keyword filter that live-filters the visible list (IME-safe, all tokens AND). Apply the row’s 处理结果 (+ expense subtype) to matching rows in the **current filter**.
 - [ ] Preview filter totals: one badge row. Same currency → source amount only. Counted-in (different currency) → source amount plus merchant amount on the next line inside the same badge (`source × fxToMerchant`); missing FX shows merchant as —. Do not format source CNY/RMB with `A$`. Do not duplicate the filter buttons per currency.
 - [ ] Saved-block list summaries (bank + commerce, desktop + mobile) show **merchant currency** (today AUD). Counted-in CNY uses that block’s `fxToMerchant`; missing FX shows —. List API / local-cache items include `fxToMerchant`.
@@ -71,11 +73,12 @@ Read **`xituan_agent/devGuide/ledger-intake/README.md`** for the product flow an
 | Currency gate | `ledger-source-currency.util.ts` |
 | Auto books map | `xituan_backend/src/domains/financial/utils/ledger-intake-books.util.ts` |
 | Sync | `LedgerIntakeService.complete` / `patchProcessed` / `deleteBlock` |
-| Migrations | `1710000000376` … `0385` (0385 drops `source_key`) |
+| Migrations | `1710000000376` … `0385` (0385 drops `source_key`); expense source cols `0389`; expense refund `0390` (`is_refund` / `refund_of_expense_id`) |
 
 ## Related docs
 
 - `xituan_agent/devGuide/ledger-intake/README.md` — authority for blocks / UI / API
+- `.cursor/skills/revenue-expense-idempotency/SKILL.md` + `xituan_agent/devGuide/revenue-expense-idempotency/README.md` — 创建收支幂等（权威）
 - `.cursor/skills/merchant-currency/SKILL.md` + `xituan_agent/devGuide/merchant-currency/README.md` — 计入 / FX / books columns
 - `.cursor/skills/s3-bucket-access/SKILL.md` + `xituan_agent/devGuide/s3/README.md` — private prefix
 - `xituan_agent/devGuide/ai/ledger-ai-use-cases.md` — AI envelope

@@ -67,5 +67,6 @@ Timezone (`platform`/`merchant` settings IANA) is **not** currency. Do not reuse
 
 - `xituan_agent/devGuide/merchant-currency/README.md` — authority
 - `.cursor/skills/ledger-intake/SKILL.md` + `xituan_agent/devGuide/ledger-intake/README.md` — 数据块保存/删除；计入公式仍以本文为准
+- `.cursor/skills/revenue-expense-idempotency/SKILL.md` + `xituan_agent/devGuide/revenue-expense-idempotency/README.md` — 不计入手工创建幂等（与 `ledger_block_id` 自动账正交）
 - `xituan_agent/devGuide/tax-return-report-design.md` — 税表快照；overlay 汇率 ≠ 入账汇率
 - `.cursor/rules/date-time-format-standard.mdc` — 日期列；与货币独立
