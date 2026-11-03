@@ -3,7 +3,7 @@ name: merchant-currency
 description: >-
   Xituan merchant book currency (currently hardcoded AUD), ledger source
   currency, FX into books, and 计入/不计入 rules. Use when adding merchant currency
-  settings, changing epLedgerCurrency, fxToMerchant / fxCnyToAud, ledger intake
+  settings, changing epLedgerCurrency, fxToMerchant, ledger intake
   计入账目汇总, auto-posted revenues/expenses, tax overlay conversion, or any
   AUD/CNY/RMB amount path that could conflict with existing books.
 ---
@@ -20,10 +20,10 @@ Read **`xituan_agent/devGuide/merchant-currency/README.md`** before changing cur
 | Books amounts (`revenues` / `expenses` / orders / invoices) | **Merchant-currency numbers, no currency column** — today that means AUD |
 | Ledger block source currency | `epLedgerCurrency` **AUD \| CNY** only; UI shows CNY as **RMB**; never persist `RMB` |
 | 计入账目汇总 | `blockCurrency !== merchantCurrency` |
-| 不计入 | Same currency (today AUD–AUD): recon only, **manual** management records |
-| Auto books | Counted-in block: ≤1 revenue/expense **per type** if amount > 0 after FX; delete block → cascade cleanup |
+| 不计入（同货币） | Recon / review + **manual** create/bind only — **no** auto books |
+| 计入（不同货币） | ≤1 revenue/expense **per classified type** (amount > 0 after FX) + **loan from/to director** balance; delete block → cascade |
 | FX for posting books | Stored `fxToMerchant` = merchant units **per 1 source unit**. Intake UI asks source units per 1 merchant unit (e.g. 1 AUD = 4.76 RMB → enter 4.76) and **inverts** before save |
-| FX on tax overlay | Separate **FY** `fxCnyToAud` — display/sidecar only; **must not** be a second write into `revenues`/`expenses` |
+| FX on tax overlay | Per-block `fxToMerchant` — display/sidecar only; **must not** re-add overlay into P&L or write books |
 
 Timezone (`platform`/`merchant` settings IANA) is **not** currency. Do not reuse timezone as a currency switch.
 
@@ -34,10 +34,11 @@ Timezone (`platform`/`merchant` settings IANA) is **not** currency. Do not reuse
 - [ ] Inclusion still uses **inequality of currencies**, not “foreign looks like CNY” hardcoded
 - [ ] Counted-in save still requires a **positive** `fxToMerchant`; missing rate → `LEDGER_BLOCK_FX_REQUIRED`
 - [ ] Auto-posted rows stay tied by **`ledger_block_id`**; do not also invent a loose `source_id` path for expenses
-- [ ] FX counted-in blocks also upsert **one** `LOAN_FROM_DIRECTOR` revenue (not P&L). Never auto-post loan-to. Domestic loan rows are manual revenue/expense only.
+- [ ] FX counted-in blocks upsert director loan **balance**: net commercial expense → `LOAN_FROM_DIRECTOR` revenue; net commercial revenue → `LOAN_TO_DIRECTOR` expense (plus any row-classified loan from/to). Commerce is expense-only so usually loan-from only. Domestic (same-currency) loan rows stay manual.
+- [ ] Auto-book dates (all types + director loans) = last day of import range (`periodEnd`), not FY end; legacy blocks without `periodEnd` may fall back to FY end
 - [ ] Tax overlay conversion stays **read-only**; P&L numbers for counted-in blocks come from the auto books
 - [ ] Display code: store `epLedgerCurrency.CNY`, show `RMB` via `displayCode` — do not add a third enum value for RMB
-- [ ] If adding a real merchant currency column: **plan history** (existing AUD books, existing `fxToMerchant`, tax `fxCnyToAud`) — do not flip `defaultMerchant()` in isolation
+- [ ] If adding a real merchant currency column: **plan history** (existing AUD books, existing `fxToMerchant`, tax overlay) — do not flip `defaultMerchant()` in isolation
 
 ## Do not
 
@@ -48,7 +49,7 @@ Timezone (`platform`/`merchant` settings IANA) is **not** currency. Do not reuse
 | Write source-currency totals into `revenues.total_amount` | That column is merchant currency |
 | Convert again in tax P&L for blocks that already auto-posted | Double count |
 | Persist currency code `RMB` | Enum/CHECK is `CNY` |
-| Use tax FY rate to create/update management records | Books use **block** `fxToMerchant` |
+| Invent a second tax-only FX field | Overlay and books both use **block** `fxToMerchant` |
 | Delete `ledger_block_id` / unique-per-type without a replacement | Block delete and upsert depend on it |
 | Rename/replace `cnyToAud` helpers by copying a second converter | Generalize **one** “source × rate → merchant” path |
 

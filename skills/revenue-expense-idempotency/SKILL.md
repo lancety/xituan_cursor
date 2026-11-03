@@ -19,8 +19,8 @@ Read **`xituan_agent/devGuide/revenue-expense-idempotency/README.md`** before ch
 - [ ] Bank-originated **revenue**: always set `source_reference=bank_row:{clientId}` via `ledgerBookIdempotencyUtil.bankRowSourceReference`; look up reference **before** source 1:1
 - [ ] Bank-originated **expense**: `source_type=bank_row` + `source_id=clientId` (migration `0389` columns)
 - [ ] 1:1 revenue sources only: `partner_invoice` / `partner_invoice_summary` / `equipment_disposal` / `expense` / `bank_row` — **not** `ORDER` (multi-payment)
-- [ ] Private-card advance loan-from: `source_type=expense` + `source_id=expenseId` (one non-refund loan per expense)
-- [ ] Manual 不计入 creates must **not** set `ledger_block_id`
+- [ ] Private-card advance loan-from (CMS expense edit button): `source_type=expense` + `source_id=expenseId` (one non-refund loan per expense; not gated on businessType)
+- [ ] Bind / OCR / 收支管理手工创建 must **not** set `ledger_block_id`; 流水界面新建/批量 **must** set current saved block id
 - [ ] Preserve stable UUID `clientId` on analyze / CSV restore; do not rely on `index:date:amount`
 - [ ] Modals must pass through initial `sourceType` / `sourceId` / `sourceReference` on create (do not overwrite with defaultSourceType only)
 - [ ] If changing the key table: edit **devGuide authority** first, then keep ledger-intake README as a **short link**, not a second full copy
