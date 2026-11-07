@@ -1,6 +1,6 @@
 ---
 name: Self-hosted App OTA
-overview: "【planned / high】基建已有：冷启动下载、下次冷启动生效、我的页长按强制 fetch+reload；Customer 有 ForceUpdateGate(minVersion)。缺口：每次打开检测热更新+最低版本+商店新版本；热更新/商店版各提示一次并记住 id/version；最低版本改为确认/取消 toast（非仅挡死门）。Merchant App 需接入与 Customer 同套检测。"
+overview: "【in_progress / high】代码已落地：硬/soft 按 OS；OTA reload；底部条按钮；4h；待真机验收。"
 todos:
   - id: doc-update-entry
     content: 定稿 planned-work entry + registry
@@ -17,41 +17,48 @@ todos:
   - id: phase-ota-apps-base
     content: expo-updates + 冷启动拉包 + 我的页长按更新（已有）
     status: completed
+  - id: toast-actions
+    content: 两端 AppToast Viewport 支持确认/取消（及可选次要官网按钮）；更新场景强制 Viewport
+    status: completed
+  - id: dual-tier-settings
+    content: Platform 拆 min/recommended 按 OS；apkUrlAndroid；recommended≥min；旧 min 双写
+    status: completed
   - id: every-open-check
-    content: "【high】每次 App 打开（含回前台策略自定）检测：热更新 / Platform minVersion / 商店可更新版本"
-    status: pending
+    content: 冷启动必查；回前台 4h；OTA / 硬 min / soft
+    status: completed
   - id: ota-prompt-once
-    content: 热更新可用→提示一次；本地存已提示的 updateId，同 id 不再提示；用户确认后再 reload
-    status: pending
-  - id: min-version-confirm-cancel
-    content: 低于 minVersion→确认/取消 toast（确认开商店；取消可继续用或按产品再定）；Merchant 也要挂检测
-    status: pending
-  - id: store-version-prompt-once
-    content: 商店有新版本→类似热更新提示一次并记住 version，推荐下载
+    content: OTA 提示一次；确认已下载则 reload，否则 fetch+reload；取消记 updateId
+    status: completed
+  - id: hard-min-merchant
+    content: 硬 Gate 按 OS；Merchant 挂根
+    status: completed
+  - id: soft-store-prompt
+    content: soft 仅 current<recommended；主商店+次要官网；取消记 version
+    status: completed
+  - id: prompt-priority
+    content: 同屏只一个：硬 min → OTA → soft
+    status: completed
+  - id: device-qa
+    content: 真机/发版验收
     status: pending
 isProject: false
 ---
 
 # 自建 OTA + 版本提示 UX（增量）
 
-**2026-11-07 现状（已验收基建）**
+## 已拍板（2026-11-07，含第二轮确认）
 
-| 能力 | 现状 |
-|------|------|
-| 冷启动 OTA | 下载；**下次**冷启动才应用（Expo 默认） |
-| 手动 OTA | 「我的」版本号 **长按** → `fetchAndReload` |
-| minVersion | Platform 可配；**Customer** `ForceUpdateGate` 挡死门；**Merchant App 未挂 Gate** |
-| 商店新版本推荐 | **无** |
-| 每次打开检测 + 一次性提示 | **无** |
+1. soft/OTA UI：底部条 **带确认/取消**（现 toast 无按钮 → **扩 Viewport**；不用 ToastAndroid）。
+2. OTA 确认：已静默下载 → **只 reload**；否则 fetch+reload。
+3. soft：仅 `current < recommended`；空或 `recommended <= current` 不提示。
+4. Platform：`recommended >= min`（同平台）。
+5. 旧 `minVersion` → iOS/Android 同值。
+6. Android CTA：双 URL → **主开商店 + 常驻「官网下载」**；`openURL(商店)` catch 再开 apk（单靠失败回调不可靠）。
+7. Customer + Merchant 同波。
+8. 回前台含硬 min：**4h** 节流（暂定）。
 
-## 新产品行为（planned-work high）
-
-1. **每次打开**检测热更新、最低版本、商店新版本（回前台是否检测实施时定）。
-2. **热更新**：有则提示一次；持久化当前 `updateId`，相同 id 不再提示；确认后下载/reload。
-3. **最低版本**：提示后 **确认 / 取消** toast（不再只靠不可关挡板——若需强制仍可确认后跳商店）。
-4. **商店新版本**：同热更新，提示一次并记住 version，推荐下载。
+官网 APK 可信实践 → planned-work **mid** `android-apk-sidecar-trust`。
 
 ## 相关
 
-- planned-work：`app-release-update-flow`（基建）+ 新 entry `app-update-check-ux`
-- 自由 channel 仍见 entry「触发后才做」
+- `app-release-update-flow`（done）+ `app-update-check-ux` + `android-apk-sidecar-trust`

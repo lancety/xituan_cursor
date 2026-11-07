@@ -1,6 +1,6 @@
 ---
 name: 退货选品与库存
-overview: 【in_progress / high】CMS 退货选品（仅退款不加库存、按行退货/扣回）。Backend+CMS 主体进行中。微信商户面板与 Merchant App 本轮不改；旧端不传新字段仍全额退款释放锁。
+overview: 【completed 2026-11-07】CMS 退货选品（仅退款不加库存、按行退货/扣回）。Backend+CMS 已上 production；微信商户面板与 Merchant App 本轮不做；旧端不传新字段仍全额退款释放锁。
 todos:
   - id: migration-returns
     content: 新增 order_item_returns 表与实体，以及 iRefundRequest 可选 disposition/returnLines
@@ -13,13 +13,13 @@ todos:
     status: completed
   - id: cms-qa-ship
     content: CMS 退货选品全路径 QA 后发版；确认旧端兼容
-    status: pending
+    status: completed
 isProject: false
 ---
 
 # CMS 退货选品（仅退款不加库存）
 
-**2026-11-07：** planned-work **high**；**正在做**。本轮只做 CMS。微信商户端和商户 App 的退款界面不改；它们不传新字段时，全额退款仍走现在的 `releaseOrderStock`。
+**2026-11-07：** planned-work **done**。CMS 范围已上 production。微信商户端和商户 App 的退款界面本轮不改；它们不传新字段时，全额退款仍走 `releaseOrderStock`。
 
 ## 已确认
 
