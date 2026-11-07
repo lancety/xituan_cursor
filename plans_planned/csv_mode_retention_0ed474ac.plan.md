@@ -269,7 +269,19 @@ flowchart TB
 
 - `GET/PUT/DELETE` 商户 MyPost 连接（存加密 token；`validate` 调 Get Organisation）
 - `confirm` 支持 `create_mode=api`（替换 stub）
-- Header（以 Postman 为准，小写）：`auspost-partner-id`（test=`TESTBED-XITUAN-8745`，prod=`XITUAN-8745`）+ `auspost-merchant-token` + `account-number` + Basic auth。平台 key 只在服务端 env。
+- Header（以 Postman 为准，小写）：`auspost-partner-id` + `auspost-merchant-token` + `account-number` + Basic auth。
+- **平台级 backend env 命名**（对齐 `DOORDASH_*` / `GOPEOPLE_*`，只写 `.env.*`，不进 git）：
+
+```env
+AUSPOST_MPB_BASE_URL=https://digitalapi.auspost.com.au/test/shipping/v1
+AUSPOST_MPB_PARTNER_ID=TESTBED-XITUAN-8745
+AUSPOST_MPB_API_KEY=
+AUSPOST_MPB_API_KEY_PASSWORD=
+# 仅本地冒烟；生产商户 token 存 DB，不放 env
+AUSPOST_MPB_TEST_MERCHANT_TOKEN=
+```
+
+生产切环境时：`BASE_URL` 去掉 `/test`，`PARTNER_ID` 改为 `XITUAN-8745`，换正式 API Key/Password。`account-number` 运行时从 `GET /organisations` 取，不设 env。
 - Label 产物落存储并可对 CMS/App 返回 URL
 - CSV 路径行为保持；App batch export/share 与 CMS `exportBatchCsv` 对齐
 
