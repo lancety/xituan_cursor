@@ -48,6 +48,10 @@ expire_date timestamp with time zone NULL;
 - New SQL only under `xituan_backend/migrations/` with the **next** numeric index.
 - Do **not** edit `migrations_stable/` as part of AI implementation.
 
+## Merchant schema partitions
+
+Before designing or creating a **`merchant`** schema table, ask whether HASH(`merchant_id`) **50 partitions** are required. See `merchant-schema-partition-ask.mdc`.
+
 ## Future hard rules
 
 Add further non-negotiable schema / index / FK / naming rules in sections below this line.

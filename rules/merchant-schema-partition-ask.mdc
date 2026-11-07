@@ -1,0 +1,22 @@
+---
+description: Ask before HASH(merchant_id) 50 partitions on new merchant schema tables
+alwaysApply: true
+---
+
+# Merchant schema — ask before 50 partitions
+
+When **designing** or **writing CREATE TABLE SQL** for tables under the **`merchant`** schema:
+
+1. **Before** drafting partition DDL (or assuming a plain table), **ask the developer** whether this table needs **HASH(`merchant_id`) 50 partitions** (same pattern as expenses / ledger / `expense_bank_row_links`).
+2. Do **not** invent partitioned vs non-partitioned on your own. Wait for an explicit answer for **that** table.
+3. If the developer already answered in the same thread (e.g. “这个表不用”), follow that answer and do not re-ask for the same table.
+4. Platform / im / public schemas are out of scope for this ask unless the developer says otherwise.
+
+```sql
+-- Only after explicit “需要 50 分区”
+CREATE TABLE merchant.example (...) PARTITION BY HASH (merchant_id);
+-- FOR VALUES WITH (MODULUS 50, REMAINDER n)
+
+-- Only after explicit “不用分区” / “这个表不用”
+CREATE TABLE merchant.example (...);  -- no PARTITION BY
+```
