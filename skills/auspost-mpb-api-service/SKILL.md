@@ -45,11 +45,11 @@ AUSPOST_MPB_BASE_URL=
 AUSPOST_MPB_PARTNER_ID=
 AUSPOST_MPB_API_KEY=
 AUSPOST_MPB_API_KEY_PASSWORD=
-# local smoke only — production merchant tokens live in Connection store
-AUSPOST_MPB_TEST_MERCHANT_TOKEN=
 ```
 
-Headers (lowercase): `authorization` Basic, `auspost-partner-id`, `auspost-merchant-token`, `account-number`（除 Get Organisation）。
+Merchant token：**CMS/App 贴 Token（或 OAuth）→ Connection DB**；Track 轮询按 `merchant_id` 读库。不要用全局 `*_MERCHANT_TOKEN` env。
+
+Headers (lowercase): `authorization` Basic, `auspost-partner-id`, `auspost-merchant-token`, `account-number`（除 Get Organisation / Track）。
 
 ## Pack-bench UI (app layer only)
 
