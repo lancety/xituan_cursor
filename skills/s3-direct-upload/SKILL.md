@@ -2,11 +2,10 @@
 name: s3-direct-upload
 description: >-
   Unified S3 direct-upload contract for xituan: presign, PUT the opaque putUrl,
-  then complete. PUT host is the existing content domain (not a new upload
-  subdomain, not media). Use when adding or changing browser, iOS, Android,
-  WeChat, CMS, Site, or Expo uploads that should skip backend multipart. Read
-  reference.md for the host decision, then the matching platform skill
-  (s3-direct-upload-web, s3-direct-upload-ios, s3-direct-upload-android).
+  then complete. PUT host is the upload CloudFront distribution (upload-incoming/
+  prefix, CloudFront-signed URL). Use when adding or changing browser, iOS,
+  Android, WeChat, CMS, Site, or Expo uploads that should skip backend multipart.
+  Read reference.md for the live distribution IDs, then the matching platform skill.
 ---
 
 # S3 direct upload (unified contract)
@@ -26,7 +25,7 @@ Forbidden:
 
 - Persisting `sourceKey` or the original `.jpg`/`.png`/`.heic` before `complete` succeeds.
 - `if (web | ios | android | wechat)` that signs a different host or calls a different presign API.
-- Enabling PUT on `media`, or on the content default `/*` behavior. Write rules are in reference.md.
+- Enabling PUT on `media` or `content`. Upload writes go to the upload distribution only. See reference.md.
 - Rewriting an S3 SigV4 host to `content` or `media`.
 - A second presign/PUT stack split by image vs file, or by OS.
 - A second copy of the three-step state machine in a page. Orchestration belongs in `xituan_codebase`; each app supplies a transport.
@@ -34,7 +33,7 @@ Forbidden:
 
 ## Presign signing (backend)
 
-Shipped signer for expense/OTA: `s3UploadManager.getSignedPutUrl` (path-style `s3-{region}.amazonaws.com`). Checksum rules that those PUTs need are in reference.md. The future content `putUrl` is signed for that cache behavior; do not reuse `getSignedPutUrl` and swap the host.
+Shipped signer for expense/OTA: `s3UploadManager.getSignedPutUrl` (path-style `s3-{region}.amazonaws.com`). Checksum rules that those PUTs need are in reference.md. The upload distribution `putUrl` is a CloudFront signed URL; do not reuse `getSignedPutUrl` and swap the host.
 
 ## What each platform skill owns
 

@@ -1,43 +1,45 @@
 # S3 直传约定
 
-Last updated: 2026-10-17
+Last updated: 2026-11-09
 
 Skill checklist 在同目录 `SKILL.md` 与 `../s3-direct-upload-web|ios|android/SKILL.md`。主机和安全约束以本文为准。
 
 ## 决定
 
-不新建 `upload[-env].lancety.com`。这个名字只出现在 2026-09 / 2026-10 的规划草稿里，没有 DNS、证书或 CloudFront，不算已落地的基础设施。
-
-上传只做一套。文件类型不决定 PUT 主机，只决定 `complete` 之后的展示主机。客户端只 PUT 不透明的 `putUrl`，不按网页 / iOS / Android / 微信换 Host。
+上传只做一套，走单独的写 CloudFront。文件类型不决定 PUT 主机，只决定 `complete` 之后的展示主机。客户端只 PUT 不透明的 `putUrl`。
 
 | 用途 | 主机 | 规则 |
 |------|------|------|
-| PUT（目录图、OpenIM 等新直传） | 现有 `content[-env]`；微信用 `wechatContent` | 只在暂存前缀的独立 behavior 上允许写入 |
-| 展示：图片、视频、音频 | `media` / `wechatMedia` | 只读，禁止 PUT |
-| 展示：其它文件 | `content` / `wechatContent` | 读 behavior 与写 behavior 分开 |
+| PUT（各端） | `upload[-env].xituan.com.au`；prod 另有 `upload.lancety.com`（同一条分布的别名） | 短时 CloudFront 签名。对象 key 必须在 `upload-incoming/` |
+| 展示：图片、视频、音频 | `media` / `wechatMedia` | 只读 |
+| 展示：其它文件 | `content` / `wechatContent` | 只读 |
+
+2026-11-09 已用 CLI 建好四条写分布。读分布和 SIH 没改。`presign` / `complete` 仍走现有 API（微信经 `backend.lancety.com`）。后端还没接这条签名，未签名的 PUT 会被 CloudFront 拒绝。
+
+| 环境 | 分布 | 别名 | 源站桶 |
+|------|------|------|--------|
+| dev | `E2LJPK638S3P2C` | `upload-dev.xituan.com.au` | `xituan-dev` |
+| staging | `E3L7IFO3MDZL81` | `upload-staging.xituan.com.au` | `xituan-staging` |
+| demo | `E3BQY4W5UZ9B6T` | `upload-demo.xituan.com.au` | `xituan-demo` |
+| prod | `E2XHQ1JF0LAKQ7` | `upload.xituan.com.au`、`upload.lancety.com` | `xituan` |
+
+证书复用已有的 `*.xituan.com.au` + `*.lancety.com`（us-east-1 `67d4bb81-8175-4e5d-ab42-7ead1714d2e5`）。OAC 复用读分布那条 `E2E06YZAM1GZWU`。缓存策略 CachingDisabled。源请求策略 `xituan-upload-s3-put`（`0b07d2fe-0dd8-4f8c-812d-571081d6b0e1`）只转发 `Content-Type` 和 CORS 预检头。签名密钥组 `6403e444-e55e-46b6-b670-983e28665ee9`，公钥 `K1MR7UEC8SHABK`。私钥在 Secrets Manager `xituan/cloudfront/upload-signing`（ap-southeast-2），不要写入仓库。
+
+`xituan.com.au` 的四条别名在 Route53。`upload.lancety.com` 的 CNAME 在 lancety DNS（2026-11-09，目标 `d2vz7boq1ttcgk.cloudfront.net`）。prod 写分布已 Deployed。微信两边的 request 合法域名都已加入 `upload.lancety.com`。未带 CloudFront 签名的请求返回 403，这是预期的。
+
+桶策略 Sid `AllowCloudFrontUploadOACPut`：只允许该写分布对 `upload-incoming/*` 做 `s3:PutObject`。没有授 `GetObject`，所以 upload 主机不能当阅读入口。demo 的这条语句写在 `demo-media-stack.yaml`，下次部署该栈不会把它冲掉。
 
 主机常量在 `xituan_codebase/constants/site-domain.ts`（各仓 submodule 同一份）。
 
-## 为什么 media 不能拿来上传
+## 写分布和读分布分开
 
-`media` 是公开展示 CDN：默认 behavior 只有 `GET` / `HEAD` / `OPTIONS`，OAC 桶策略只有 `s3:GetObject`，缓存是 CachingOptimized。在这条 behavior 上打开 PUT，写入用的是 distribution 身份而不是上传者身份，对象一旦写入就能被公开 GET，并且和图片边缘缓存混在一起。
+`media` 和 `content` 是公开读 CDN（CachingOptimized，OAC 只有 `s3:GetObject`）。upload 是另一条分布：允许 PUT，不缓存，必须带 CloudFront 签名，桶策略只给 `upload-incoming/*`。
 
-demo 的 content distribution 同样是只读 OAC，见 `xituan_agent/aws-setup/demo/demo-media-stack.yaml`。差别是 content 的定位是「直读 S3、不做图片变换」，已经承担非图片文件和 OTA 的阅读；写入行为加在它上面，而不是加在图片缓存上。
+不要把 `upload` 别名加进读分布，也不要 CNAME 到 `xituan.com.au` 的 API。签名绑的是 upload 主机。API 中介不会把 PUT 转给 S3。
 
-## 为什么不再加 upload 子域
+SIH 上手工挂过的 `images` 别名（prod 的 `images.*` 仍在 SIH，dev/staging/demo 的 `images-*` 已是读分布别名）与这条写分布无关，不要照搬。
 
-单独子域可以把写 distribution 和读 distribution 拆开，但要新的 DNS、证书、CloudFront 别名，以及微信 request 合法域名。`content[-env].lancety.com` 已经在用。只要下面的写入约束全部成立，就不需要第三个主机。
-
-这些约束缺任何一条，就不要在 content 上开 PUT，那时才重新考虑独立写域名：
-
-1. 默认 behavior（`/*`）保持 `GET` / `HEAD` / `OPTIONS`，不加 PUT。
-2. 只有暂存前缀（例如 `/_incoming/*`）有单独 behavior：方法含 PUT，缓存策略为 CachingDisabled。
-3. 该 behavior 必须校验调用方（CloudFront 签名 URL 或等价的短时授权）。不能匿名 PUT。
-4. 桶策略 `s3:PutObject` 只授予这个 distribution，且资源只到暂存前缀。
-5. 禁止把 S3 SigV4 URL 的 Host 改成 `content` 或 `media`。签名绑 Host。content 上的 `putUrl` 由这条 behavior 自己签发，不是 `getSignedPutUrl` 改个域名。
-6. 源对象写在暂存前缀。`complete` 成功后再落到展示 key。不要把未确认对象放在公开 CDN 的最终路径上。
-
-这条写入 behavior 还没配。配好之前，目录图和 OpenIM 维持 multipart，不要开始直传。
+`putUrl` 由后端用 Secrets Manager 里的私钥签到 `https://upload…/upload-incoming/…`。不要用 `getSignedPutUrl` 再改 Host。支出 OCR 和 OTA CLI 仍走 `amazonaws.com`，不在这次迁。
 
 ## 为什么不按类型做两套上传
 
@@ -54,7 +56,7 @@ demo 的 content distribution 同样是只读 OAC，见 `xituan_agent/aws-setup/
 
 编排放在 `xituan_codebase`。各端只提供 transport。页面里不要再写一套三步流程。
 
-微信 PUT 用 `wx.request`，走 request 合法域名里的现成 `content*.lancety.com`，不用 `wx.uploadFile`，也不把 `amazonaws.com` 配进合法域名。
+微信 PUT 用 `wx.request` 打 `upload.lancety.com`（request 合法域名），不用 `wx.uploadFile`，也不把 `amazonaws.com` 或 `content` / `media` 配进 request 合法域名。
 
 ## 已经在跑的直传（不要顺手改主机）
 
@@ -62,11 +64,11 @@ demo 的 content distribution 同样是只读 OAC，见 `xituan_agent/aws-setup/
 |------|------|-----|
 | CMS 支出批量 OCR | 已上线 | `s3UploadManager.getSignedPutUrl` → `s3-{region}.amazonaws.com` |
 | App OTA CLI `ota:prepare` | 已上线（发布机，不是手机） | 同上；对象前缀 `app-ota/`，阅读走 content |
-| 目录图 / OpenIM 附件 | 未做；OpenIM 预签名曾落地并已整段回退 | 按本文，等 content 写入 behavior |
+| 目录图 / OpenIM 附件 | 业务未接；写 CloudFront 已建 | `putUrl` 签到 `upload` 主机的 `upload-incoming/` |
 
-支出和 OTA 继续用现有 S3 预签名。不要在同一次改动里把它们迁到 content behavior。
+支出和 OTA 继续用现有 S3 预签名。不要在同一次改动里把它们迁到 upload 分布。
 
-AWS SDK v3.729+ 会把 CRC32 塞进 `PutObject`。浏览器和 Expo 的 PUT 填不了 `x-amz-checksum-crc32=AAAAAA==`，表现是 `ERR_CONNECTION_RESET` 或 403。`s3-config.util.ts` 保持 `requestChecksumCalculation` / `responseChecksumValidation` 为 `WHEN_REQUIRED`；`getSignedPutUrl` 继续把 checksum 相关头放进 `unhoistableHeaders`。新的 content 签名同样不能把灵活校验和查询参数放进客户端 URL。PUT 的 `Content-Type` 必须和 presign 记录的一致。
+AWS SDK v3.729+ 会把 CRC32 塞进 `PutObject`。浏览器和 Expo 的 PUT 填不了 `x-amz-checksum-crc32=AAAAAA==`，表现是 `ERR_CONNECTION_RESET` 或 403。`s3-config.util.ts` 保持 `requestChecksumCalculation` / `responseChecksumValidation` 为 `WHEN_REQUIRED`；`getSignedPutUrl` 继续把 checksum 相关头放进 `unhoistableHeaders`。upload 的 `putUrl` 是 CloudFront 签名，不是 S3 SigV4，不要带 `x-amz-checksum-*`。S3 预签名路径仍不要把灵活校验和放进客户端 URL。PUT 的 `Content-Type` 必须和 presign 记录的一致。
 
 ## 端上传输（细节在对应 skill）
 
