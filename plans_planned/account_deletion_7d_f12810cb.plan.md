@@ -7,22 +7,22 @@ todos:
     status: completed
   - id: backend-deletion-api
     content: users 待删除字段 + status=deleted；发起/取消/me；ADMIN 关店 inactive；cron 匿名化
-    status: pending
+    status: completed
   - id: merchant-app-ui
     content: More 按角色确认文案；首页顶栏 7 天倒计时+取消
-    status: pending
+    status: completed
   - id: customer-app-ui
     content: AccountInfo 应用内删号；我的页顶栏倒计时+取消
-    status: pending
+    status: completed
   - id: cms-site-ui
     content: CMS dashboard 顶栏；Site delete-account 自助页
-    status: pending
+    status: completed
   - id: ios-strip-stripe
     content: 商户 iOS 构建去掉 Stripe/PassKit；Review 回复口径
-    status: pending
+    status: completed
   - id: review-reply-draft
     content: 定稿 Resolution Center：删号路径说明 + PassKit + 商业模式四问
-    status: pending
+    status: completed
 isProject: false
 ---
 
@@ -37,7 +37,7 @@ Cursor plan（planned）：`d:/projects/xituan_module/.cursor/plans_planned/acco
 |----|------|
 | 范围 **A** | **两端 App + 网页**：同一套 API；顾客「我的」顶栏；商户首页顶栏；**CMS** [`dashboard.tsx`](xituan_cms/src/pages/dashboard.tsx) 顶栏；网站 `/delete-account` 改为登录后自助发起（不再唯一依赖邮件） |
 | 用户数据 **B** | 到期匿名化用户 PII；订单/发票等依法保留；解除成员绑定 |
-| 商户主体 | **行保留**；若删除者在该商户为 **`epMerchantRole.ADMIN`（商户超级管理员）** → 关闭运营：`platform.merchants.status = inactive`（与 Platform「商户管理」状态开关同一字段；公网店需 `active` 才可见）。**不用** `suspended`（冻结/客服恢复语义） |
+| 商户主体 | **只** `status → inactive` 关运营（ADMIN 发起时）；**不删内容**（商品/活动/设置/图/门店/订单等全部保留）。**不用** `suspended`。与 Platform「商户管理」状态开关同一字段 |
 | 角色 | **ADMIN**：可删自己 + 确认后商店下线；**普通成员**（manager/producer/delivery）：只能删自己账号信息，**不**改商户 status |
 | 用户 status | **扩展枚举** `epUserStatus`：新增 `deleted`（与未验证邮箱用的 `inactive` 分开） |
 | 宽限期 | **7 天**；期间可登录；顶栏倒计时 + **取消删除**；到期 cron **匿名化** |
@@ -64,12 +64,13 @@ Cursor plan（planned）：`d:/projects/xituan_module/.cursor/plans_planned/acco
 **依法保留（不删行、不去掉业务事实）**
 
 - 订单 / 支付 / 发票 / 税务相关；商户主体行与门店；履约副本
+- **商户业务内容全部保留**：products / offers / preorder / news / settings / 图 / stores 等 **不删、不洗**
 - 本阶段 **不** 批量改历史订单行上的收货人快照
 
 **商户成员与关运营**
 
 - 到期（或见下「时机」）：解除该 `user_id` 在各商户的成员绑定
-- 用户在某商户角色为 **`epMerchantRole.ADMIN`**：该商户 `status → inactive`（关闭运营；CMS [`MerchantStatusGate`](xituan_cms/src/components/MerchantStatusGate.tsx) / 公网 `merchant.status !== 'active'` 已挡）
+- 用户在某商户角色为 **`epMerchantRole.ADMIN`**：该商户 **仅** `status → inactive`（关运营；CMS [`MerchantStatusGate`](xituan_cms/src/components/MerchantStatusGate.tsx) / 公网 `merchant.status !== 'active'` 已挡）；**禁止**级联删商户内容
 - 用户仅为普通成员：只解绑自己，**不**改 `merchants.status`
 - 其他成员账号不受影响；订单账本不删
 - Platform「商户管理」编辑状态与此同源；实现时 Select 建议补上 `inactive` / `suspended`（现 UI 多只列 pending/active/rejected，实体注释已含 inactive/suspended）
@@ -143,7 +144,8 @@ sequenceDiagram
 
 ## 明确不做
 
-- 不物理 DELETE 商户行、不删订单账本
+- 不物理 DELETE 商户行；**不删**商户商品/活动/设置等任何业务内容（只 inactive）
+- 不删订单账本
 - 普通成员删号不关店
 - 不以邮件为唯一删号路径
 - 不为过审把宽限期改成 0
