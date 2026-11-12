@@ -123,8 +123,11 @@ import { badgeStyleUtil } from '.../badge-style.util';
 
 ---
 
-## 活动订单卡片（示例）
+## 活动 / CMS 订单卡片（示例）
 
-- 订单/支付状态：`activityOrderDetailModalUtil.stateBadgeClass(tone)` → `.badge-state--*`
+完整卡片元素与支付 badge 可点规则见 **`cms-order-card`** skill。
+
+- 订单/支付状态：可点用 `.badge-btn`；只读用 `activityOrderDetailModalUtil.stateBadgeClass(tone)` → `.badge-state--*`
+- 承诺支付 `committed` → 按钮可点确认；未支付 `pending` → 状态样式不可点
 - 详情链接：`span` + `btnClass(BLUE)` + 内链 `btnLinkClass()`
 - 发布状态列：`OfferLifecycleTag` / `PreorderLifecycleTag` → `span` + `btnClass(color)`

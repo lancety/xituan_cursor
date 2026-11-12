@@ -1,6 +1,6 @@
 # S3 直传约定
 
-Last updated: 2026-11-09
+Last updated: 2026-11-13
 
 Skill checklist 在同目录 `SKILL.md` 与 `../s3-direct-upload-web|ios|android/SKILL.md`。主机和安全约束以本文为准。
 
@@ -14,7 +14,7 @@ Skill checklist 在同目录 `SKILL.md` 与 `../s3-direct-upload-web|ios|android
 | 展示：图片、视频、音频 | `media` / `wechatMedia` | 只读 |
 | 展示：其它文件 | `content` / `wechatContent` | 只读 |
 
-2026-11-09 已用 CLI 建好四条写分布。读分布和 SIH 没改。`presign` / `complete` 仍走现有 API（微信经 `backend.lancety.com`）。后端还没接这条签名，未签名的 PUT 会被 CloudFront 拒绝。
+2026-11-09 已用 CLI 建好四条写分布。2026-11-13 **框架已落地**（签发 + 路由 + codebase 编排 + 各端 transport）；业务 purpose（目录图 / OpenIM）后置。未签名的 PUT 仍为 403。
 
 | 环境 | 分布 | 别名 | 源站桶 |
 |------|------|------|--------|
@@ -23,13 +23,39 @@ Skill checklist 在同目录 `SKILL.md` 与 `../s3-direct-upload-web|ios|android
 | demo | `E3BQY4W5UZ9B6T` | `upload-demo.xituan.com.au` | `xituan-demo` |
 | prod | `E2XHQ1JF0LAKQ7` | `upload.xituan.com.au`、`upload.lancety.com` | `xituan` |
 
-证书复用已有的 `*.xituan.com.au` + `*.lancety.com`（us-east-1 `67d4bb81-8175-4e5d-ab42-7ead1714d2e5`）。OAC 复用读分布那条 `E2E06YZAM1GZWU`。缓存策略 CachingDisabled。源请求策略 `xituan-upload-s3-put`（`0b07d2fe-0dd8-4f8c-812d-571081d6b0e1`）只转发 `Content-Type` 和 CORS 预检头。签名密钥组 `6403e444-e55e-46b6-b670-983e28665ee9`，公钥 `K1MR7UEC8SHABK`。私钥在 Secrets Manager `xituan/cloudfront/upload-signing`（ap-southeast-2），不要写入仓库。
+证书复用已有的 `*.xituan.com.au` + `*.lancety.com`（us-east-1 `67d4bb81-8175-4e5d-ab42-7ead1714d2e5`）。OAC 复用读分布那条 `E2E06YZAM1GZWU`。缓存策略 CachingDisabled。源请求策略 `xituan-upload-s3-put`（`0b07d2fe-0dd8-4f8c-812d-571081d6b0e1`）只转发 `Content-Type` 和 CORS 预检头。签名密钥组 `6403e444-e55e-46b6-b670-983e28665ee9`，公钥 `K1MR7UEC8SHABK`。私钥在 Secrets Manager `xituan/cloudfront/upload-signing`（ap-southeast-2），**不要写入仓库或 `.env`**。Secret 名在代码常量 `CLOUDFRONT_UPLOAD_SIGNING_SECRET_ID`。
 
-`xituan.com.au` 的四条别名在 Route53。`upload.lancety.com` 的 CNAME 在 lancety DNS（2026-11-09，目标 `d2vz7boq1ttcgk.cloudfront.net`）。prod 写分布已 Deployed。微信两边的 request 合法域名都已加入 `upload.lancety.com`。未带 CloudFront 签名的请求返回 403，这是预期的。
+IAM：组 `s3_xituan` 内联策略 `CloudFrontUploadSigningSecretRead`（`GetSecretValue` / `DescribeSecret` 仅该 secret）。本地 `S3_KEY` 用户已可读取。
 
-桶策略 Sid `AllowCloudFrontUploadOACPut`：只允许该写分布对 `upload-incoming/*` 做 `s3:PutObject`。没有授 `GetObject`，所以 upload 主机不能当阅读入口。demo 的这条语句写在 `demo-media-stack.yaml`，下次部署该栈不会把它冲掉。
+`xituan.com.au` 的四条别名在 Route53。`upload.lancety.com` 的 CNAME 在 lancety DNS（目标 `d2vz7boq1ttcgk.cloudfront.net`）。微信 request 合法域名已含 `upload.lancety.com`。
 
-主机常量在 `xituan_codebase/constants/site-domain.ts`（各仓 submodule 同一份）。
+桶策略 Sid `AllowCloudFrontUploadOACPut`：只允许该写分布对 `upload-incoming/*` 做 `s3:PutObject`。没有授 `GetObject`。demo 同 Sid 在 `demo-media-stack.yaml`。
+
+主机：`site-domain.upload` / `site-domain.wechatUpload`（prod 微信用 `https://upload.lancety.com`；非 prod 的 wechatUpload 与 upload 同为 xituan 主机）。
+
+## 测试
+
+| 类型 | 命令 |
+|------|------|
+| Jest unit + API integration（mock CF/S3） | `cd xituan_backend && npm test -- --testPathPattern=direct-upload` |
+| 真链烟测（Secrets Manager + CloudFront PUT + S3 HEAD） | `npx ts-node --transpile-only scripts/probe-direct-upload.ts` |
+
+## 框架模块（2026-11-13）
+
+| 层 | 路径 |
+|----|------|
+| 契约 | `xituan_codebase/constants/direct-upload.enum.ts`、`typing_api/direct-upload.type.ts` |
+| 编排 | `xituan_codebase/utils/direct-upload.util.ts` → `uploadOne` / `uploadMany` |
+| 签发 | `xituan_backend/src/shared/utils/cloudfront-upload-signing.util.ts` |
+| 服务 | `xituan_backend/src/domains/direct-upload/` |
+| 商户路由 | `POST /api/admin/direct-upload/presign`、`.../complete` |
+| 顾客路由 | `POST /api/direct-upload/presign`、`.../complete` |
+| Web transport | CMS `src/utils/direct-upload-web.transport.ts`；Site 同名 |
+| RN transport | 商家/顾客 App `src/utils/direct-upload-rn.transport.ts` |
+| 微信 transport | `packageMerchant/utils/direct-upload.wechat.transport.ts`；顾客 `utils/direct-upload-customer.wechat.transport.ts` |
+| CLI 探测 | `xituan_backend/scripts/probe-direct-upload.ts`（`NODE_ENV=development npx ts-node --transpile-only scripts/probe-direct-upload.ts`） |
+
+框架期 `purpose=probe`：须登录；≤256KB；MIME 白名单。`complete` 只 HEAD，返回 `path = sourceKey`。新业务加 `epDirectUploadPurpose` 值 + complete hook，不要新开签名栈。
 
 ## 写分布和读分布分开
 
@@ -75,8 +101,8 @@ AWS SDK v3.729+ 会把 CRC32 塞进 `PutObject`。浏览器和 Expo 的 PUT 填�
 | 端 | 做法 |
 |----|------|
 | 网页 | `fetch` PUT，body 是 `File` / `Blob`，不是 FormData；不带 cookie。支出面板 `putFileToPresignedUrl` 对瞬时断连最多重试 3 次。跨域 PUT 需要目标主机 CORS 放行 `PUT` 和 `Content-Type`。 |
-| iOS | Expo 57 `File.upload`：`httpMethod: 'PUT'`（默认是 POST）、`UploadType.BINARY_CONTENT`、`sessionType: 'foreground'`（默认 background，JS 被挂起后就叫不了 `complete`）。选图沿用 `preferredAssetRepresentationMode: Compatible`，HEIC 按 JPEG 字节和 `image/jpeg` 来签。`putUrl` 是 HTTPS，不加 ATS 例外。 |
-| Android | 与 iOS 同一个 JS 调用。`content://` 先拷到缓存 `file://` 再 PUT。`sessionType` 只作用于 iOS，共享 helper 仍传 `foreground`。`usesCleartextTraffic` 只服务本地 API，上传不走明文。 |
+| iOS | Expo 57 `File.upload`：`httpMethod: 'PUT'`、`BINARY_CONTENT`、`sessionType: 'foreground'`。**2026-10：** 勿用 RN `fetch`+FormData 传文件；相册权限 `PHOTOS_PERMISSION`；HEIC 用 Compatible / 真实 JPEG 字节。细节见 `s3-direct-upload-ios`。 |
+| Android | 与 iOS 同一 JS 调用；`content://` → 缓存 `file://`。**2026-10：** 产品多图选图勿用 `expo-image-picker`（ActivityResultLauncher 崩溃），用 `DocumentPicker`（见 `merchant-product-image-pick.util.ts`）。细节见 `s3-direct-upload-android`。 |
 
 顾客端和商家端共用这一份 Expo transport，不要各写一套状态机。
 

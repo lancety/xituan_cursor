@@ -12,7 +12,9 @@ description: >-
 
 Authority for the **checklist**. Host, security constraints, and why there is one PUT implementation: [reference.md](reference.md). Platform skills only define how that platform performs the PUT.
 
-Do not start catalog/OpenIM direct upload until the content write behavior in reference.md exists. Expense OCR and OTA stay on presigned `amazonaws.com`.
+Framework (signer, routes, codebase `directUploadUtil`, platform transports) is live — see reference.md. Catalog/OpenIM still need purpose + UI. Expense OCR and OTA stay on presigned `amazonaws.com`.
+
+**Tests:** offline Jest under `xituan_backend/tests` (`--testPathPattern=direct-upload`); live AWS smoke via `npx ts-node --transpile-only scripts/probe-direct-upload.ts` (not in default Jest).
 
 ## Only legal sequence
 
