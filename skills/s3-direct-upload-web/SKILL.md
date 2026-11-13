@@ -50,18 +50,21 @@ Pick file → call the codebase orchestrator (or, until it exists, the same thre
 Shipped: `xituan_site/src/utils/direct-upload-web.transport.ts`,
 `xituan_cms/src/utils/direct-upload-web.transport.ts`.
 
-### API base — do not double `/api`
+### API base — do not double `/api`（必查）
 
-Site `NEXT_PUBLIC_API_URL` is typically `http://host:3050/api` (see `.env.template`).
-Join as `{API_BASE}/direct-upload/presign` — **not** `{API_BASE}/api/direct-upload/...`.
+Both Site and CMS `NEXT_PUBLIC_API_URL` typically already end with `/api`.
 
-Symptom of doubling: `POST …/api/api/direct-upload/presign` → 400
-`Request context initialization failed` / `Merchant ID is required` (wrong router).
+| App | Join path (copy sibling clients) |
+|-----|----------------------------------|
+| Site | `{API_BASE}/direct-upload/presign` |
+| CMS | `{API_BASE}/admin/direct-upload/presign` (same prefix style as `product.api` → `/admin/products`) |
 
-CMS often uses host-only base and paths under `/api/admin/direct-upload/…`.
-Match whatever that app’s other APIs already use; do not copy Site paths into CMS
-or the reverse.
+**Forbidden:** `{API_BASE}/api/...` when base already has `/api`  
+→ `…/api/api/admin/direct-upload/presign` → **404**.
 
+**Before commit:** open DevTools Network (or read env + path) and confirm the
+full URL has a **single** `/api`. Do not invent CMS as “host-only + `/api/admin`”
+unless that app’s other `fetch` calls literally do the same.
 ### Site Authorization
 
 Site tokens live in `authStoreManager` (`localStorage` key `xituan_auth` JSON),

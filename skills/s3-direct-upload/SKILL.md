@@ -62,15 +62,25 @@ public GETs that should fall through to later `/api` routers
 Auth must be **per-route** on customer direct-upload only. Admin mount under
 `/api/admin` may keep `router.use(authenticate)` because that prefix is admin-only.
 
-### Double `/api` path
+### Double `/api` path（写 / 改 transport **必做**核对）
 
-| App | Typical `NEXT_PUBLIC_API_URL` | Transport path |
-|-----|------------------------------|----------------|
-| **Site** | already ends with `/api` | `direct-upload/presign` (no extra `/api`) |
-| **CMS** | often host only (`http://…:3050`) | `/api/admin/direct-upload/presign` |
+**Before** hard-coding any transport path, open that app’s **existing** API client
+(e.g. CMS `product.api.ts`, Site `cart.service`) and copy **the same** join rule.
+Do **not** guess from this table alone; env may include or omit `/api`.
 
-Wrong Site join → `…/api/api/direct-upload/presign` → misses the real route →
-falls into product `requestContext` → **Merchant ID is required**.
+| App | Typical `NEXT_PUBLIC_API_URL` | Path to join (must match sibling APIs) |
+|-----|------------------------------|----------------------------------------|
+| **Site** | already ends with `/api` | `direct-upload/presign` — **never** `api/direct-upload/...` |
+| **CMS** | **also** usually ends with `/api` (same as `product.api`) | `/admin/direct-upload/presign` — **never** `/api/admin/...` |
+
+**Mandatory check after writing the string:** mentally concat  
+`NEXT_PUBLIC_API_URL` + path → must be exactly one `/api` segment  
+(e.g. `http://host:3050/api` + `/admin/direct-upload/presign`  
+→ `…/api/admin/direct-upload/presign`).  
+If you see `…/api/api/…` in DevTools, the transport doubled `/api` — fix path, not env.
+
+Symptom: `POST …/api/api/…/presign` → **404** or wrong router →
+`Merchant ID is required` / `Request context initialization failed`.
 
 ### complete vs PUT
 

@@ -12,8 +12,8 @@ todos:
     content: 备注图/头像不单独立项 — 随该端当前目录图/顾客面迁移一并改
     status: in_progress
   - id: expo-cms-catalog
-    content: 按端迁：微信顾客 done → Site done → 顾客App done → CMS → 商家App
-    status: in_progress
+    content: 按端迁：微信顾客 done → Site done → 顾客App done → CMS done → 商家App done
+    status: completed
   - id: wechat-customer-note-avatar
     content: 微信顾客 cart_note_images + user_avatar 直传（waitNormalize）
     status: completed
@@ -31,7 +31,7 @@ todos:
     status: cancelled
   - id: skill-cms-form
     content: skill cms-form-image-upload 改为直传 checklist
-    status: pending
+    status: completed
   - id: post-deploy-multipart
     content: 各端发版无流量后另开 post-deploy 下线旧 multipart 路由
     status: pending
@@ -102,4 +102,4 @@ isProject: false
 
 ## 触发
 
-主动启动时实施。微信顾客 / Site / 顾客 App 备注图+头像已迁直传（2026-11-13）；下一步 CMS。
+主动启动时实施。微信顾客 / Site / 顾客 App / **CMS** / 商家 App 目录面已迁直传（2026-11-13）；下一步打印模板 + OpenIM，再 post-deploy 下线 multipart。
