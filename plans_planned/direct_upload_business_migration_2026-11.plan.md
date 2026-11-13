@@ -24,7 +24,7 @@ todos:
     content: 顾客 App cart_note_images（no-wait + 原图回退）+ user_avatar（wait）直传
     status: completed
   - id: print-temp-and-openim
-    content: 打印模板 CMS done；OpenIM CMS+Site done（微信/App 仍 multipart）
+    content: 打印模板 CMS done；OpenIM CMS+Site+顾客/商家App done（微信仍 multipart）
     status: in_progress
   - id: wechat-merchant-storefront-skip
     content: 微信商家「我的网店」深链下全部功能 — 忽略直传迁移（不排期）
@@ -91,7 +91,7 @@ isProject: false
 | 按端迁移 | 微信顾客 **done** → Site **done** → 顾客App **done** → CMS → 商家App | 步 3（拆开做） |
 | 备注图 / 头像 | 微信/Site **done**；其余并入各端 | 步 3 |
 | ~~我的网店深链~~ | — | **忽略** |
-| D+B | 打印模板 **done**；OpenIM **CMS+Site done**（微信/App 待迁） | 步 4 |
+| D+B | 打印模板 **done**；OpenIM **CMS+Site+顾客/商家 App done**（微信待迁） | 步 4 |
 | OCR | — | 搁置 |
 
 台账：
@@ -102,4 +102,4 @@ isProject: false
 
 ## 触发
 
-主动启动时实施。微信顾客 / Site / 顾客 App / **CMS** / 商家 App 目录面已迁直传（2026-11-13）；**CMS 打印模板图**已直传（wait）；**OpenIM CMS+Site** 已直传（域内 presign/complete）；下一步微信/App OpenIM，再 post-deploy 下线 multipart。
+主动启动时实施。微信顾客 / Site / 顾客 App / **CMS** / 商家 App 目录面已迁直传（2026-11-13）；**CMS 打印模板图**已直传（wait）；**OpenIM CMS+Site+顾客/商家 App** 已直传（域内 presign/complete）；下一步微信 OpenIM，再 post-deploy 下线 multipart。
