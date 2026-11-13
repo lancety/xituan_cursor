@@ -48,6 +48,8 @@ await productApi.updateProduct(id, formDataWithoutFiles, paths);
 
 Compliance docs: `uploadDocument` + `purpose=file`, `entityId` = field name.
 
+Print template fixed images: `uploadOne` with `PRINT_TEMP_IMAGE`, **`waitNormalize: true`**, **`compress: false`** after `convertToGrayscale` (PNG). Do not use catalog no-wait.
+
 ## Backend
 
 - Update endpoints already merge `currentImages` query; leave `req.files` empty when clients direct-upload.
