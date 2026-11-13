@@ -1,21 +1,24 @@
 ---
 name: Direct upload business migration
-overview: 【planned / high】通用直传框架已完成；本清单只覆盖尚未启动的业务迁移——目录/业务图与 OpenIM 附件接入 purpose、complete hook、薄 UI，以及旧 multipart 下线门禁。支出 OCR / OTA 不迁。
+overview: 【planned / high】框架已完成。微信商家「我的网店」深链忽略；备注图/头像随各端迁移合并；CMS/Expo 目录图可做；打印模板+IM 同批后置；OCR 搁置；先 planned 不开工。
 todos:
-  - id: purpose-catalog
-    content: 扩展 epDirectUploadPurpose（目录图 bindKind / 实体）+ complete 挂 IMAGE_NORMALIZE sync，返回 canonical path
+  - id: purpose-hooks
+    content: purpose/bindKind + complete 挂 IMAGE_NORMALIZE sync（目录图/备注/头像共用）
     status: pending
-  - id: purpose-openim
-    content: OpenIM 附件 purpose + complete（权限、附件表、canonical webp/cdnUrl）
+  - id: per-client-merge-note-avatar
+    content: 备注图/头像不单独立项 — 随该端当前目录图/顾客面迁移一并改
     status: pending
+  - id: expo-cms-catalog
+    content: Expo 商家 + CMS 目录图薄 Upload（Offer/Preorder → Product/News…）
+    status: pending
+  - id: print-temp-and-openim
+    content: 打印模板 + OpenIM 附件同批后置
+    status: pending
+  - id: wechat-merchant-storefront-skip
+    content: 微信商家「我的网店」深链下全部功能 — 忽略直传迁移（不排期）
+    status: cancelled
   - id: orphan-ttl
     content: upload-incoming 未 complete 对象 TTL/孤儿清理
-    status: pending
-  - id: ui-catalog-cms-wechat-expo
-    content: 目录图：CMS / 微信商家 / Expo 商家薄 Upload；表单只交 path；Offer/Preorder 先打通
-    status: pending
-  - id: ui-openim-all-clients
-    content: OpenIM：各端聊天附件改直传协议（复用已有 transport）
     status: pending
   - id: skill-cms-form
     content: skill cms-form-image-upload 改为直传 checklist
@@ -40,67 +43,46 @@ isProject: false
 
 权威约定与平台坑：skill `s3-direct-upload` / `s3-direct-upload-web|ios|android`。
 
+总表：[image-upload-surface-inventory.md](../../xituan_agent/devGuide/image-upload-surface-inventory.md)
+
 ## 本 plan 范围
 
-**做**：在现有框架上挂业务 `purpose`、complete hook、薄 UI；对齐已有台账。
+**做**：purpose/complete hook + 薄 UI；对齐台账。
 
-**不做**：
+**不做 / 搁置**：
 
-- 再建第二套 presign/PUT 状态机
-- 迁支出 OCR / OTA（继续 `amazonaws.com` SigV4）
-- 在 `media` / `content` 开写
-- 历史 OpenIM Mongo `.png` URL 回填
+- 再建第二套 PUT 状态机
+- **微信商家「我的网店」深链下的全部功能** — **忽略直传迁移**
+- OCR 决定搁置（维持 SigV4）
+- OTA；`media`/`content` 开写；历史 OpenIM Mongo `.png` 回填
 
-```mermaid
-flowchart TB
-  done[Framework_done]
-  catalog[Catalog_images]
-  openim[OpenIM_attachments]
-  cleanup[Post_deploy_drop_multipart]
-  done --> catalog
-  done --> openim
-  catalog --> cleanup
-  openim --> cleanup
-```
+## 已确认实施顺序（2026-11-13 修订）
 
-**上传面总表 + 迁移差异 + 典型流程**：[image-upload-surface-inventory.md](../../xituan_agent/devGuide/image-upload-surface-inventory.md)
-
-## 清单 A — 目录 / 业务图
-
-台账：[catalog-image-direct-upload](../../xituan_agent/devGuide/planned-work/entries/2026-10-catalog-image-direct-upload.md)  
-标准：[catalog-image-direct-upload-standard.md](../../xituan_agent/devGuide/catalog-image-direct-upload-standard.md)
-
-1. `epDirectUploadPurpose`（或 bindKind）覆盖团购/预定/商品/新闻等图；禁止平行 `CatalogImageDirectUploadService` 状态机——扩展现有 `DirectUploadService.complete` hook。
-2. `complete`：HEAD → **IMAGE_NORMALIZE sync** → 只回 **canonical**；表单只交 path 文本。
-3. 端：CMS → 微信商家 → Expo 商家；Offer/Preorder 先打通，再 Product/News。
-4. 更新 skill `cms-form-image-upload`。
-5. 旧 `.../images/:kind` multipart 与 CMS FormData 收文件 → 流量归零后 **post-deploy** 另开。
-
-## 清单 B — OpenIM 附件
-
-台账：[openim-attachment-direct-upload](../../xituan_agent/devGuide/planned-work/entries/2026-09-openim-attachment-direct-upload.md)
-
-1. 同一 upload 写分布；`putUrl` 不透明；各端复用已有 Transport。
-2. `complete`：会话权限、附件持久化、图片则 canonical webp + `cdnUrl`。
-3. 孤儿 TTL（申请未确认）。
-4. 旧 `POST .../attachments` multipart 下线另开 post-deploy。
-
-## 共享横切
-
-| 项 | 说明 |
-|----|------|
-| 孤儿清理 | catalog 与 OpenIM 共用 `upload-incoming/` TTL 策略，可一次实现 |
-| 验收 | Jest 扩 purpose/ownership；真链继续 probe + 业务冒烟 |
-| registry | 启动实施时把对应 entry 从「依赖框架」改为进行中；完成后 `done` |
-
-## 建议实施顺序
-
-1. purpose + complete hook（目录图 IMAGE_NORMALIZE）可先于 UI  
-2. CMS Offer/Preorder 薄组件打通  
-3. 微信 / Expo 商家同契约  
-4. OpenIM（或与目录图并行，视人力）  
+1. purpose / bindKind + complete hook（IMAGE_NORMALIZE sync）  
+2. **按端迁移目录图等业务上传**（Expo 商家、CMS、Site/顾客 App、微信**顾客**包…）  
+   - **备注图 / 头像**：不单独立项、不抢先；**随该端当前波次一并改掉**（该端有则合并进同 PR/同里程碑）  
+3. **打印模板** + **OpenIM** 同批后置  
+4. 孤儿 TTL  
 5. post-deploy 拆旧 multipart  
+
+**明确忽略**：微信商家「我的网店」深链全部功能。
+
+## 清单分桶
+
+| 桶 | 内容 | 何时 |
+|----|------|------|
+| A 目录图等（按端） | CMS、Expo 商家；微信顾客包若有非「我的网店」上传面 | 步 2 |
+| 备注图 / 头像 | `cart_note_images` / `user_avatar` | **并入各端步 2**，不单独排期 |
+| ~~微信商家「我的网店」深链~~ | 深链可达全部功能 | **忽略** |
+| D+B | 打印模板 + OpenIM | **同批后置**（步 3） |
+| OCR | 支出收据 | 搁置 |
+
+台账：
+
+- 目录图：[catalog-image-direct-upload](../../xituan_agent/devGuide/planned-work/entries/2026-10-catalog-image-direct-upload.md)  
+- OpenIM：[openim-attachment-direct-upload](../../xituan_agent/devGuide/planned-work/entries/2026-09-openim-attachment-direct-upload.md)  
+- 标准：[catalog-image-direct-upload-standard.md](../../xituan_agent/devGuide/catalog-image-direct-upload-standard.md)
 
 ## 触发
 
-主动启动「减 backend 上传带宽」或「OpenIM 附件直传」时实施；**现在不改业务页**。
+主动启动时实施；**先 planned，现在不改业务页**。
