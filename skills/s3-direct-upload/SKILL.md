@@ -47,7 +47,68 @@ Shipped signer for expense/OTA: `s3UploadManager.getSignedPutUrl` (path-style `s
 
 Customer and merchant Expo apps share **one** JS transport. The iOS and Android skills are native edge rules for that transport, not two upload products.
 
+## Pitfalls (learned in migration)
+
+### Backend mount: never blanket-auth a router on `/api`
+
+Customer routes live at `POST /api/direct-upload/presign|complete` via
+`app.use('/api', createCustomerDirectUploadRoutes(...))`.
+
+**Do not** `router.use(authMiddleware.authenticate)` on that router. Express runs
+router-level middleware for every request that enters the mount, including
+public GETs that should fall through to later `/api` routers
+(e.g. `GET /products-preorderable/list` → `TOKEN_REQUIRED` / Merchant ID errors).
+
+Auth must be **per-route** on customer direct-upload only. Admin mount under
+`/api/admin` may keep `router.use(authenticate)` because that prefix is admin-only.
+
+### Double `/api` path
+
+| App | Typical `NEXT_PUBLIC_API_URL` | Transport path |
+|-----|------------------------------|----------------|
+| **Site** | already ends with `/api` | `direct-upload/presign` (no extra `/api`) |
+| **CMS** | often host only (`http://…:3050`) | `/api/admin/direct-upload/presign` |
+
+Wrong Site join → `…/api/api/direct-upload/presign` → misses the real route →
+falls into product `requestContext` → **Merchant ID is required**.
+
+### complete vs PUT
+
+- `presign` / `complete` = JSON to backend (POST).
+- File bytes = **PUT** to opaque `putUrl` (upload CF), not POST to backend.
+- Local WeChat/devtools `http://tmp/…` preview is **not** the S3 PUT.
+
+### waitNormalize — when to wait vs no-wait
+
+| Mode | Use when |
+|------|----------|
+| **wait** (`true`) | Next screen **must** have canonical / `_w*` immediately, or many views only accept CDN URL with no fallback (avatar, OpenIM, print, WeChat notes without local copy). |
+| **no-wait** (`false`) | User can leave the upload step before Lambda finishes, **and** display has a safe fallback (below). |
+
+### no-wait display standard (required)
+
+After `complete` with `waitNormalize: false`:
+
+1. Persist **`path || promotedKey`** (never `sourceKey` / `upload-incoming/`).
+2. Promote has already copied the object to the business key — **original** is readable on media/content CDN.
+3. `_w*` / SIH variants often **do not exist yet** → first paint of sized thumbs 404s.
+
+**Standard UI contract for no-wait surfaces (Site cart notes shipped as reference):**
+
+```text
+preferred src = sized URL (_w64 / getImageUrl / getImageUrlForKind)
+onError     → swap to original object URL (getOriginalUrl / getPreviewImageUrl)
+lightbox    → original URL (already no _w*)
+```
+
+- Do **not** block add-to-cart / navigate on IMAGE_NORMALIZE just to avoid thumb 404.
+- After normalize completion rewrites DB path to canonical, sized thumbs work on next load.
+- If the surface **cannot** implement onError→original (or local File preview), use **wait** instead.
+
+Shipped example: `xituan_site` cart `CartItemCard` / `CartItemRow` + `siteImageUtil.getCartNoteThumbUrl`.
+
 ## Related docs
 
 - `.cursor/skills/s3-bucket-access/SKILL.md` — private prefix CDN Deny / bucket policy
 - `xituan_agent/devGuide/s3/README.md` — prefix registry
+- Web-specific auth/base URL: `s3-direct-upload-web`

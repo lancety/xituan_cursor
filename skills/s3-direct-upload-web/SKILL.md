@@ -44,3 +44,47 @@ If `putUrl` is cross-origin (`amazonaws.com` or `content.*`), that host must all
 ## Page duties
 
 Pick file → call the codebase orchestrator (or, until it exists, the same three calls) → store only the canonical path on the form. Submit has no file field.
+
+## Site vs CMS transport (pitfalls)
+
+Shipped: `xituan_site/src/utils/direct-upload-web.transport.ts`,
+`xituan_cms/src/utils/direct-upload-web.transport.ts`.
+
+### API base — do not double `/api`
+
+Site `NEXT_PUBLIC_API_URL` is typically `http://host:3050/api` (see `.env.template`).
+Join as `{API_BASE}/direct-upload/presign` — **not** `{API_BASE}/api/direct-upload/...`.
+
+Symptom of doubling: `POST …/api/api/direct-upload/presign` → 400
+`Request context initialization failed` / `Merchant ID is required` (wrong router).
+
+CMS often uses host-only base and paths under `/api/admin/direct-upload/…`.
+Match whatever that app’s other APIs already use; do not copy Site paths into CMS
+or the reverse.
+
+### Site Authorization
+
+Site tokens live in `authStoreManager` (`localStorage` key `xituan_auth` JSON),
+**not** bare `localStorage.token` / `accessToken`.
+
+Use `authStoreManager.getToken()` (same as `cart.service` / `auth.service`).
+Missing Bearer still hits customer authenticate → 401 `TOKEN_REQUIRED`.
+
+### Parent append vs child file input
+
+If the parent `setNoteImageFiles(prev => [...prev, ...files])`, the child file
+`onChange` must pass **only newly selected files**, not
+`[...existing, ...new]`. Passing the full list double-appends (preset note image
+duplicated when user adds another photo).
+
+### no-wait thumbs (Site cart notes — standard)
+
+When upload uses `waitNormalize: false` and the next page shows CDN thumbs:
+
+1. Prefer `_w*` / `getImageUrl(..., s64)`.
+2. **`img.onError` → `getOriginalUrl(path)`** (promote 后原图已在 media).
+3. Preview/lightbox already uses original — no change.
+
+Do not sync-wait Lambda on add→cart. Full rule: parent skill **no-wait display standard**.
+
+Reference: `siteImageUtil.getCartNoteThumbUrl` + `CartItemCard` / `CartItemRow`.

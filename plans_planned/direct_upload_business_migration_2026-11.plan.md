@@ -12,10 +12,13 @@ todos:
     content: 备注图/头像不单独立项 — 随该端当前目录图/顾客面迁移一并改
     status: in_progress
   - id: expo-cms-catalog
-    content: 按端迁：微信（顾客 done）→ Site → 顾客App → CMS → 商家App
+    content: 按端迁：微信顾客 done → Site done → 顾客App → CMS → 商家App
     status: in_progress
   - id: wechat-customer-note-avatar
     content: 微信顾客 cart_note_images + user_avatar 直传（waitNormalize）
+    status: completed
+  - id: site-customer-note-avatar
+    content: Site cart_note_images（no-wait + 购物车原图回退）+ user_avatar（wait）直传
     status: completed
   - id: print-temp-and-openim
     content: 打印模板 + OpenIM 附件同批后置
@@ -72,7 +75,7 @@ isProject: false
 | 模式 | 何时 |
 |------|------|
 | **wait** | 多处只认 CDN、对端要 URL、或本地句柄保不住（头像、OpenIM、打印模板、微信备注默认） |
-| **no-wait** | 仅「表单/store 级 File 或稳定文件副本」可保活时（CMS 目录图/logo、商家 App 目录图、Site/顾客 App 备注图） |
+| **no-wait** | CMS 目录图/logo、商家 App 目录图；Site 备注（购物车 `_w*` onError→原图） |
 
 重判表见 [image-upload-surface-inventory.md](../../xituan_agent/devGuide/image-upload-surface-inventory.md) § complete 双模式。
 
@@ -82,8 +85,8 @@ isProject: false
 |----|------|------|
 | complete + normalize | 双模式 wait/no-wait；禁止源 path 最终落库 | 步 1 |
 | 孤儿 TTL | 24h | 步 2 |
-| 按端迁移 | 微信顾客 **done** → Site → 顾客App → CMS → 商家App | 步 3（拆开做） |
-| 备注图 / 头像 | 微信顾客 **done**；其余并入各端 | 步 3 |
+| 按端迁移 | 微信顾客 **done** → Site **done** → 顾客App → CMS → 商家App | 步 3（拆开做） |
+| 备注图 / 头像 | 微信/Site **done**；其余并入各端 | 步 3 |
 | ~~我的网店深链~~ | — | **忽略** |
 | D+B | 打印模板 + OpenIM | 步 4 |
 | OCR | — | 搁置 |

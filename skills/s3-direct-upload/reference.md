@@ -46,7 +46,8 @@ IAM：组 `s3_xituan` 内联策略 `CloudFrontUploadSigningSecretRead`（`GetSec
 1. HEAD `sourceKey`（须在 `upload-incoming/` 且归属当前 actor）  
 2. **Copy** 到业务前缀（`merchant/…` 或 `user/…`，按 bindKind）  
 3. IMAGE_NORMALIZE：`waitNormalize=true` → sync 等终态回 **canonical**；`false` → async，回 `jobId` + `promotedKey`，`path` 为空  
-4. 默认 wait：头像 / OpenIM / 打印模板 = true；目录图/logo/备注图等 = false（客户端可覆盖）
+4. 默认 wait：头像 / OpenIM / 打印模板 = true；目录图/logo 等 = false（客户端可覆盖）  
+5. **no-wait 展示标准**：落库 `path \|\| promotedKey`；缩略图先 `_w*`，**`onError` → 原图 URL**（promote 后原对象可读）。详见 `SKILL.md`；Site 购物车备注图已落地
 
 ## 框架模块（2026-11-13）
 
@@ -57,8 +58,8 @@ IAM：组 `s3_xituan` 内联策略 `CloudFrontUploadSigningSecretRead`（`GetSec
 | 签发 | `xituan_backend/src/shared/utils/cloudfront-upload-signing.util.ts` |
 | 服务 | `xituan_backend/src/domains/direct-upload/` |
 | 商户路由 | `POST /api/admin/direct-upload/presign`、`.../complete` |
-| 顾客路由 | `POST /api/direct-upload/presign`、`.../complete` |
-| Web transport | CMS `src/utils/direct-upload-web.transport.ts`；Site 同名 |
+| 顾客路由 | `POST /api/direct-upload/presign`、`.../complete`（**按路由鉴权**，禁止在挂 `/api` 的 router 上 `router.use(authenticate)`） |
+| Web transport | CMS `src/utils/direct-upload-web.transport.ts`；Site 同名（Site 的 `NEXT_PUBLIC_API_URL` 已含 `/api`，path 勿再加 `/api`；Authorization 用 `authStoreManager`） |
 | RN transport | 商家/顾客 App `src/utils/direct-upload-rn.transport.ts` |
 | 微信 transport | `packageMerchant/utils/direct-upload.wechat.transport.ts`；顾客 `utils/direct-upload-customer.wechat.transport.ts` |
 | CLI 探测 | `xituan_backend/scripts/probe-direct-upload.ts`（`NODE_ENV=development npx ts-node --transpile-only scripts/probe-direct-upload.ts`） |
