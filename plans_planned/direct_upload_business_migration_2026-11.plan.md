@@ -10,10 +10,13 @@ todos:
     status: completed
   - id: per-client-merge-note-avatar
     content: 备注图/头像不单独立项 — 随该端当前目录图/顾客面迁移一并改
-    status: pending
+    status: in_progress
   - id: expo-cms-catalog
-    content: 按端迁：微信→Site→顾客App→CMS→商家App
-    status: pending
+    content: 按端迁：微信（顾客 done）→ Site → 顾客App → CMS → 商家App
+    status: in_progress
+  - id: wechat-customer-note-avatar
+    content: 微信顾客 cart_note_images + user_avatar 直传（waitNormalize）
+    status: completed
   - id: print-temp-and-openim
     content: 打印模板 + OpenIM 附件同批后置
     status: pending
@@ -79,8 +82,8 @@ isProject: false
 |----|------|------|
 | complete + normalize | 双模式 wait/no-wait；禁止源 path 最终落库 | 步 1 |
 | 孤儿 TTL | 24h | 步 2 |
-| 按端迁移 | 微信→Site→顾客App→CMS→商家App | 步 3（拆开做） |
-| 备注图 / 头像 | 并入各端 | 步 3 |
+| 按端迁移 | 微信顾客 **done** → Site → 顾客App → CMS → 商家App | 步 3（拆开做） |
+| 备注图 / 头像 | 微信顾客 **done**；其余并入各端 | 步 3 |
 | ~~我的网店深链~~ | — | **忽略** |
 | D+B | 打印模板 + OpenIM | 步 4 |
 | OCR | — | 搁置 |
@@ -93,4 +96,4 @@ isProject: false
 
 ## 触发
 
-主动启动时实施；**先 planned，现在不改业务页**。
+主动启动时实施。微信顾客备注图/头像已迁直传（2026-11-13）。
