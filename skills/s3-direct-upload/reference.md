@@ -39,6 +39,14 @@ IAM：组 `s3_xituan` 内联策略 `CloudFrontUploadSigningSecretRead`（`GetSec
 |------|------|
 | Jest unit + API integration（mock CF/S3） | `cd xituan_backend && npm test -- --testPathPattern=direct-upload` |
 | 真链烟测（Secrets Manager + CloudFront PUT + S3 HEAD） | `npx ts-node --transpile-only scripts/probe-direct-upload.ts` |
+| 孤儿 TTL（`upload-incoming/` 1 天过期） | `npx ts-node --transpile-only scripts/s3-upload-incoming-lifecycle-24h.ts` |
+
+## complete（purpose=image）
+
+1. HEAD `sourceKey`（须在 `upload-incoming/` 且归属当前 actor）  
+2. **Copy** 到业务前缀（`merchant/…` 或 `user/…`，按 bindKind）  
+3. IMAGE_NORMALIZE：`waitNormalize=true` → sync 等终态回 **canonical**；`false` → async，回 `jobId` + `promotedKey`，`path` 为空  
+4. 默认 wait：头像 / OpenIM / 打印模板 = true；目录图/logo/备注图等 = false（客户端可覆盖）
 
 ## 框架模块（2026-11-13）
 
