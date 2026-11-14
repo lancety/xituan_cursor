@@ -3,4 +3,4 @@ alwaysApply: true
 ---
 for planning investigation explaination of not-finalized topics put into agent project 'docs' folder.
 for structured design solution, server/service setup, implementation solution, put into agent project 'devGuide' folder.
-for cross-app UI/UX/visual design contracts (flat L0→L2), put into agent project 'devDesign' folder.
+for cross-app UI/UX/visual design contracts (flat L0→L2 index + topic mds), put into agent project 'devDesign' folder; L2 root files are short indexes—details in sibling topic files (e.g. site-theme.md); agents open only the topic needed. L0 mandates mobile-first, mobile/tablet/desktop, light+dark, and Xituan brand cyan/yellow/purple (+ badge functional palette) via 00-platform-wide.md and brand.md.
