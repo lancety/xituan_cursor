@@ -2,4 +2,5 @@
 alwaysApply: true
 ---
 for planning investigation explaination of not-finalized topics put into agent project 'docs' folder.
-for structured design solution, server/service setup, implementation solution, put into agent project 'devGuide' folder
+for structured design solution, server/service setup, implementation solution, put into agent project 'devGuide' folder.
+for cross-app UI/UX/visual design contracts (flat L0→L2), put into agent project 'devDesign' folder.

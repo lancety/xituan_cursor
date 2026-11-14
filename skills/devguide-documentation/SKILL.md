@@ -17,7 +17,8 @@ description: >-
 |------|------|
 | 已定稿方案、实施计划、运维 runbook、长期架构 | `xituan_agent/devGuide/` |
 | 讨论中、未收敛、临时调查 | `xituan_agent/docs/` |
-| 跨项目契约表、规范 | `xituan_agent/devStandard/` |
+| 跨项目契约表、规范（API/JSON/错误码等） | `xituan_agent/devStandard/` |
+| 跨端 UI / UX / 视觉合同（扁平 L0→L2） | `xituan_agent/devDesign/` |
 
 **未经用户明确要求，不要新建 `.md`。**
 
