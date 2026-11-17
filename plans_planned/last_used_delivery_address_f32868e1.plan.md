@@ -37,7 +37,7 @@ isProject: false
 
 # 用户地址：默认地址 → 最后使用配送地址
 
-**状态（2026-11-07）：** planned-work **low**；未开工。post-deploy 条目 `user-address-last-used-delivery` 仍适用（Phase1 双写 → Gate 后 DROP `is_default`）。
+**状态（2026-11-16）：** planned-work **low**；未开工。只记在 `xituan_agent/devGuide/planned-work/entries/2026-11-last-used-delivery-address.md`。Phase 1 双写 `is_default`；发版后再单独记 DROP。
 
 ## 规则
 
@@ -48,4 +48,4 @@ isProject: false
 
 ## 实施备忘
 
-详见历史方案正文（Phase1 ADD + 双写；WeChat 全量后再 Phase3 DROP）。主动启动前先读 `xituan_agent/devGuide/post-deploy-ledger/entries/2026-06-user-address-last-used-delivery.md`。
+详见历史方案正文（Phase1 ADD + 双写；WeChat 全量后再 Phase3 DROP）。主动启动前先读 `xituan_agent/devGuide/planned-work/entries/2026-11-last-used-delivery-address.md`。

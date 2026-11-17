@@ -141,7 +141,7 @@ After deploy:
 | Behaviour change | Backend supports both; old clients unchanged | Remove old path | Client metrics / version |
 | Site + backend same day, WeChat lags | Phase 1 for WeChat compat | Phase 3 for cleanup | WeChat only |
 
-Example entry: [`entries/2026-06-user-address-last-used-delivery.md`](../../xituan_agent/devGuide/post-deploy-ledger/entries/2026-06-user-address-last-used-delivery.md)
+Example entry: [`entries/2026-11-orders-reorder-preorder-retire.md`](../../xituan_agent/devGuide/post-deploy-ledger/entries/2026-11-orders-reorder-preorder-retire.md)
 
 ---
 

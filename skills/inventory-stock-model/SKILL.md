@@ -214,4 +214,5 @@ When editing inventory-related code:
 For a more detailed, Chinese-language explanation (with concrete SQL examples and test references), see:
 
 - `xituan_agent/devGuide/inventory-stock-model-and-modes.md`
+- Lock, refund, and restock by order/payment status: `.cursor/skills/inventory-lock-refund-restock/SKILL.md`
 
