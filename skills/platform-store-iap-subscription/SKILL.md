@@ -69,7 +69,7 @@ Util: `apple-iap-merchant-bind.util.ts`.
 2. Verify JWS / App Store Server API transaction
 3. Reject `revocationDate`
 4. Reject `expiresDate <= now` (ms, not date-only alone)
-5. `getAllSubscriptionStatuses` must be Active / Billing Retry / Grace (not Expired/Revoked)
+5. `getAllSubscriptionStatuses` for this `transactionId` + `productId` must be **Active** only. Billing retry and Apple billing grace do not grant the purchase.
 6. Occupancy assert (above)
 7. `activateMonthly` + best-effort `setAppAccountToken`
 
@@ -90,11 +90,13 @@ File: `xituan_app_merchant/src/utils/iap/merchant-iap-storekit.util.ts`
 
 1. Parse body → `signedPayload` (ASN) / RTDN message (Google)
 2. Verify signature with store library
-3. Map notification type → entitlement op:
-   - Grant / renew / resubscribe → `activateMonthly`
+3. Map notification type → entitlement op (groups in `apple-iap-monthly-group.util.ts`):
+   - Purchase paid (`ACTIVE` on that transaction) → `activateMonthly`
+   - `DID_RENEW` (including `BILLING_RECOVERY`) → `activateMonthly` renew
    - Auto-renew on/off → `setAutoRenewEnabled` / `Disabled`
-   - Billing retry → `markBillingRetry`
-   - Expired / refund / revoke / grace expired → `cutAccessNow`
+   - `DID_FAIL_TO_RENEW` → record only. Keep `current_period_end` and the system 7-day `grace_period_end`. Do not cut.
+   - `EXPIRED` / `GRACE_PERIOD_EXPIRED` before system grace ends → do not cut. After grace, `cutAccessNow`.
+   - `REFUND` / `REVOKE` → `cutAccessNow` immediately
 4. Always ACK store with **200** after durable handling when verify succeeded; hard verify failure may 400 (ASN). Prefer not to invent parallel status writers.
 5. Sandbox ASN URL (Connect) must point at current tunnel:  
    `https://<host>/api/webhooks/apple-iap`  
