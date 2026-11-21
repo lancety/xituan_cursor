@@ -1,0 +1,24 @@
+---
+description: >-
+  Merchant app (xituan_app_merchant) Play / store release notes and public
+  changelog wording. Avoid volunteering billing/IAP product details Google has
+  not asked about.
+alwaysApply: true
+---
+
+# Merchant App — store release copy
+
+When drafting **Google Play** (or other public store) release notes / changelogs for `xituan_app_merchant`:
+
+## Do not volunteer
+
+- Do **not** mention **monthly** subscription, auto-renew, IAP SKU count, Apple AUD list price, StoreKit, App Account Token, or “月订 / 内购套餐周期” style detail **unless** Play / the reviewer already raised that topic in the same review thread.
+- Prefer neutral product wording: e.g. subscription / plan / checkout improvements — without billing cadence or store-channel mechanics.
+
+## OK to mention (when it shipped)
+
+- High-level UX: plans screen, checkout flow, order/refund, chat, products, fulfillment map, update prompts, device-availability fixes — without naming IAP product structure.
+
+## Apple vs Play
+
+- Apple App Review replies may need IAP / monthly detail when **Apple** asked. Do not copy that phrasing into **Play** release notes by default.

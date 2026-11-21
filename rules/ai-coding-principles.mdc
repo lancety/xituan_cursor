@@ -67,6 +67,29 @@ Follow **`.cursor/skills/post-deploy-ledger/SKILL.md`** for pre-deploy / post-de
 
 **Do not** put Phase N cleanup in the same PR as Phase 1 by default. **Do not** drop compatibility layers without checking `registry.md`.
 
+### 6. Match existing production / legacy identifiers (no invented parallel names)
+
+Before writing **any** new string that becomes a durable identity in prod data or storage, **grep and copy** the existing canonical form. Do **not** invent a “cleaner” spelling beside it.
+
+Applies especially to:
+
+| Kind | Examples |
+|------|----------|
+| S3 / media path segments | `offer` vs `offers`, `featuredImage` vs `featuredImages`, `product/image` vs `products/.../images` |
+| DB schema / column / enum wire values | schema names, `json` keys already stored |
+| Public URL / route path fragments that appear in bookmarks or clients | keep existing segment spelling |
+
+**Required before inventing a path or segment:**
+
+1. Grep legacy writers (e.g. `uploadFileToS3` / `imageUploadUtil` / cleanup `Prefix`) and at least one **real prod or shared layout** example.
+2. Prefer **byte-for-byte** the same folder segment(s) already used for that resource.
+3. Singular/plural, camelCase vs kebab, and nesting (`…/header` vs `…/headerImage`) are **not** free style — mismatch creates a second folder and breaks cleanup / backfill / CDN assumptions.
+4. If you believe the old layout must change: **ask the developer first**; do not silently dual-write a new top-level folder for the same domain.
+
+**Bad (learned):** `direct-upload-promote-key` used `merchant/…/offers/…` while prod and multipart upload used `merchant/…/offer/…` → orphan `offers/` tree in dev.
+
+**Good:** promote key matches `imageUploadUtil` / `offerResourceCleanup` (`offer`, `featuredImage`).
+
 ---
 
 ## Bug fix
@@ -139,6 +162,7 @@ Applies to hard-to-reproduce UI issues: conditional render, effects, memoization
 - [ ] Searched for existing implementation
 - [ ] Reuse is 100% scenario-aligned, or duplication is intentional
 - [ ] Shared code lives in the right repo/layer; dependencies are clean
+- [ ] New S3/path/enum/route segments match existing prod/legacy writers (grep; no parallel spelling) — see §6
 - [ ] If change could break released production consumers: phased plan + post-deploy ledger entry (see §5)
 
 **Fix**

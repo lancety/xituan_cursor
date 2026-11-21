@@ -33,6 +33,20 @@ Forbidden:
 - A second copy of the three-step state machine in a page. Orchestration belongs in `xituan_codebase`; each app supplies a transport.
 - Serving **private** prefixes via content/media GET. Who may GET is **`s3-bucket-access`** (ledger-intake and later private keys).
 
+## Permanent promote keys (hard rule)
+
+`buildPromotedObjectKey` / any permanent key **outside** `upload-incoming/` must **copy** the existing merchant layout already written by multipart / cleanup — not a renamed “API-plural” folder.
+
+| Do | Do not |
+|----|--------|
+| Grep `imageUploadUtil`, `uploadFileToS3([...])`, `*Cleanup*.util`, prod sample keys | Invent `offers/` when prod uses `offer/` |
+| Keep singular/plural and leaf names identical (`featuredImage`, `headerImage`) | “Normalize” to `featuredImages` / `products/` without an explicit migration plan |
+| Ask before changing a top-level segment used in prod | Dual-write a second tree for the same domain |
+
+Authority for path spelling: **existing writers + cleanup prefixes**, not REST resource names (`/api/offers` ≠ S3 `offers/`).
+
+Project rule: `.cursor/rules/ai-coding-principles.mdc` §6.
+
 ## Presign signing (backend)
 
 Shipped signer for expense/OTA: `s3UploadManager.getSignedPutUrl` (path-style `s3-{region}.amazonaws.com`). Checksum rules that those PUTs need are in reference.md. The upload distribution `putUrl` is a CloudFront signed URL; do not reuse `getSignedPutUrl` and swap the host.

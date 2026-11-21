@@ -48,11 +48,12 @@ Do **not** invent parallel size tables in app code. Enum edges: `enSiteImageSize
 5. **Frontend must not call SIH** for normal UI. Domain key: `media` / `wechatMedia`. SIH hosts (`SIH` / `wechatSIH` / `imagesih-*`) are **backend-only**.
 6. **Change size policy order** (non-negotiable):
    1. Edit `IMAGE_NORMALIZE_VARIANT_POLICY` (+ sync Lambda `VARIANT_POLICY` if applicable)
-   2. Pre-gen / backfill that kind (`jobs:backfill-normalize` or enqueue path)
+   2. Pre-gen / backfill that kind (`npm run backfill:script:media` or enqueue path)
    3. Prune orphans if removing edges (`--prune-orphans`)
    4. Then wire UI to the new edge
 7. Progressive kinds only: use `tImageNormalizeProgressiveKind`. Do **not** pass `EXPENSE_RECEIPT` into `siteImageProgressiveUtil.resolveUrls`.
-8. **`_w*` pre-gen resize**: Sharp `fit: 'inside'` within `edge×edge` (proportional, no short-edge crop). Never `fit: 'cover'` for variants. Canonical long-side limit also uses `inside`. UI may still use CSS `object-fit: cover` for square frames.
+8. **`_w*` pre-gen resize**: Sharp `fit: 'inside'` within `edge×edge` (proportional, no short-edge crop). Never `fit: 'cover'` for **display** `_w64|_w128|_w256|_w512`. Canonical long-side limit also uses `inside`. UI may still use CSS `object-fit: cover` for square frames.
+9. **WeChat share JPG siblings (exception)**: For cover/default images only, IMAGE_NORMALIZE may also write `{base}_w400_1-1.jpg` (400×400) and `{base}_w500_5-4.jpg` (500×400) with Sharp `fit: 'cover'`, source `_w512` else canonical, JPEG quality ~80. See `share-aspect-image.util.ts`. Do **not** use display webp `_w*` as `onShareTimeline` / OpenSDK `imageUrl`.
 
 ## Typical kind → UI mapping
 
@@ -129,10 +130,8 @@ App wrappers (`siteImageUtil.getImageUrl`, CMS helpers, WeChat `getContentUrlIma
 
 ```bash
 cd xituan_backend
-npm run jobs:backfill-normalize -- --env production --dry-run
-npm run jobs:backfill-normalize -- --env production --confirm-prod --kinds news_images
-# Re-encode `_w*` only (keep canonical): --force --variants-only
-npm run jobs:backfill-normalize -- --env production --confirm-prod --force --variants-only --kinds expense_receipt
+npm run backfill:script:media
+# → 选环境 / job（当前：image-share-aspect）→ dry-run preview → yes 后执行（production 自动带 --confirm-prod）
 ```
 
 Upload HTTP path uses `imageNormalizeEnqueueUtil` **sync** (wait for terminal). C4 backfill uses **inline worker directly** / async — do not block API.
