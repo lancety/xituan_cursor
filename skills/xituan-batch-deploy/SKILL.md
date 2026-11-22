@@ -2,7 +2,7 @@
 name: xituan-batch-deploy
 description: >-
   Batch-deploys xituan multi-repos: confirm master, multirepo sync to origin/master
-  (sync skill runs wechat preupload:check + backend/cms/platform/site tsc_lint twice—
+  (sync skill runs wechat complete-check + backend/cms/platform/site tsc_lint twice—
   start and after Git stages), then checkout production → align with master →
   push origin production → checkout master. Keywords: 批量部署, batch deploy. If the user
   names repos, only those; if none named, all deployable main repos (skip repos with no
@@ -42,7 +42,7 @@ description: >-
 
 | 仓（在范围内时） | 命令 |
 |------------------|------|
-| `xituan_wechat_app` | `npm run preupload:check` |
+| `xituan_wechat_app` | `npm run complete-check` |
 | `xituan_backend` / `xituan_cms` / `xituan_platform` / `xituan_site` | `npm run tsc_lint` |
 
 - **起点（sync 阶段 0）**：任何 Git 之前；失败则 **STOP**，修好再继续。
@@ -99,7 +99,7 @@ git checkout master
 ## 检查清单
 
 - [ ] 范围已解析（全量或用户点名）
-- [ ] Sync 阶段 0 / 阶段 6：范围内 wechat `preupload:check` + backend/cms/platform/site `tsc_lint` 均已通过
+- [ ] Sync 阶段 0 / 阶段 6：范围内 wechat `complete-check` + backend/cms/platform/site `tsc_lint` 均已通过
 - [ ] 范围内仓已在 master 完成 sync + `push origin master`（或跳过）
 - [ ] 有 production 的仓已 `merge master` + `push origin production` + 回到 master
 - [ ] 无 production 的仓已跳过并说明

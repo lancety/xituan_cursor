@@ -3,7 +3,7 @@ name: xituan-multirepo-codebase-sync
 description: >-
   Syncs the shared xituan_codebase Git submodule across xituan_backend, xituan_cms,
   xituan_platform, xituan_site, xituan_wechat_app, xituan_app_customer, and
-  xituan_app_merchant using a fixed order: quality gates (wechat preupload:check +
+  xituan_app_merchant using a fixed order: quality gates (wechat complete-check +
   backend/cms/platform/site tsc_lint) run twice—once before any Git work and once after
   all branch/Git stages finish—then backend codebase first (when not skipped),
   then six consumer codebases (when each parent main is not skipped), then seven main
@@ -151,7 +151,7 @@ description: >-
 
 | 仓库 | 命令 |
 |------|------|
-| `xituan_wechat_app` | `npm run preupload:check` |
+| `xituan_wechat_app` | `npm run complete-check` |
 | `xituan_backend` | `npm run tsc_lint` |
 | `xituan_cms` | `npm run tsc_lint` |
 | `xituan_platform` | `npm run tsc_lint` |
@@ -159,7 +159,7 @@ description: >-
 
 ```bash
 # WeChat
-cd xituan_wechat_app && npm run preupload:check
+cd xituan_wechat_app && npm run complete-check
 
 # TS / lint (each repo root)
 cd xituan_backend && npm run tsc_lint
@@ -172,7 +172,7 @@ cd xituan_site && npm run tsc_lint
 
 - **exit ≠ 0**（含 TypeScript error、ESLint error、segfault 等）：视为失败 → **先修复** → 对失败仓复跑直到通过 → 再继续流程。
 - **仅 Warning、exit 0**：视为通过，不强制清 warning。
-- **子集同步**：用户点名主仓时，只对点名范围内且上表列出的仓跑对应检查（例如只 sync cms+backend → 跑 backend/cms `tsc_lint`，不跑 wechat/platform/site；点名含 wechat → 跑 `preupload:check`）。全量 sync 时上表五仓**全部**必跑。
+- **子集同步**：用户点名主仓时，只对点名范围内且上表列出的仓跑对应检查（例如只 sync cms+backend → 跑 backend/cms `tsc_lint`，不跑 wechat/platform/site；点名含 wechat → 跑 `complete-check`）。全量 sync 时上表五仓**全部**必跑。
 - **不在上表的仓**（`xituan_app_customer`、`xituan_app_merchant`、`xituan_agent`、`.cursor`）：本门禁不要求额外命令。
 - 阶段 6 再次失败时：修复后**只复跑阶段 6**（不必重跑阶段 0），通过后再收尾报告。
 
@@ -254,9 +254,9 @@ git push origin master
    ```bash
    cd xituan_wechat_app
    npm run sync:wechat-main-constants
-   npm run verify:wechat-main-constants
+   npm run complete-check
    ```
-   将 `lib/wechat-main-constants/**` 与 `scripts/wechat-main-constants.manifest.mjs` 等一并纳入主仓提交。可选全量检查：`npm run lint`。
+   将 `lib/wechat-main-constants/**` 与 `scripts/wechat-main-constants.manifest.mjs` 等一并纳入主仓提交。
 3. 确认子模块指针已更新：`git status` 中 `submodules/xituan_codebase` 等应反映**本轮**阶段 2 已执行的结果（或与阶段 1 未跳过时的远程 `master` SHA 一致）。若该主项目在阶段 2 曾整 repo 跳过，本步仅核对当前指针与业务预期，不要求与阶段 2 对齐。
 4. **主仓库变更与子模块指针一并提交并推送**（见上文「主仓库提交范围」）：默认 `git add -A` → `git commit -m "..."` → **`git push origin master`**。  
    - 已干净且与 `origin/master` 同步则跳过 commit/push。  
@@ -318,7 +318,7 @@ git push origin master
 
 ## 实施检查清单
 
-- [ ] **阶段 0（起点门禁）**：范围内 `xituan_wechat_app` `preupload:check` 与 backend/cms/platform/site `tsc_lint`（按子集）已通过；失败已修复后再进 Git
+- [ ] **阶段 0（起点门禁）**：范围内 `xituan_wechat_app` `complete-check` 与 backend/cms/platform/site `tsc_lint`（按子集）已通过；失败已修复后再进 Git
 - [ ] **每个**实际参与同步的仓库路径：已进入 **`master`**，否则已 `checkout master` 成功；失败则已 **终止**并交用户手动处理。
 - [ ] **整 repo 跳过**：已按「主仓库无待同步」跳过者，**未**对其执行阶段 1/2/3 中对应段落；未跳过者已完整执行。
 - [ ] **Stash**：仅创建/恢复/丢弃带**本轮** `$STASH_TAG` 的条目；未创建 stash 的目录未执行 `pop`；未对历史 `stash@{n}` 做无参 `stash pop`。

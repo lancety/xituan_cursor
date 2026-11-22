@@ -55,10 +55,9 @@ import { epBadgeBtnColor } from '../../lib/wechat-main-constants/constants/badge
 
 ```bash
 cd xituan_wechat_app
-npm run check:subpackage-imports   # 分包/codebase import 边界
-npm run lint                       # 上者 + no-bootstrap-module-init + no-ungated-bootstrap-in-early-lifecycle
+npm run complete-check   # verify wechat-main-constants + 全量 ESLint（含分包/bootstrap 边界）
 ```
 
-两者的 verify 与 ESLint 各自独立执行，constants drift 不会掩盖 import 违规。
+verify 与 ESLint 各自独立执行，constants drift 不会掩盖 import 违规。
 
 详见 `xituan_agent/devGuide/wechat-subpackage-bootstrap-contract.md`、`wechat-bootstrap-gate-share-coldstart.md`。

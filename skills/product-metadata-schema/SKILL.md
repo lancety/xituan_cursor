@@ -108,13 +108,14 @@ Input: **`merchantId`**, product **`categoryId`** (leaf subcategory typical).
 | Layer | English (code) | Chinese (product copy) | Meaning |
 |-------|----------------|------------------------|---------|
 | Merchant task + `merchant.metadata_attribute_suppression` | **suppression** | **弃用** | Record-only: **does not** delete `products.metadata` values or merchant definition rows; tasks can be **rolled back**. |
-| Platform row, no replacement | **`RETIRED`** (`epPlatformMetadataTemplateFieldStatus`) | **退场** | Field is sunset **without** a replacement key. **New** product metadata schema for **create** typically **omits** this key (rare); historic jsonb may still exist—merge/validation policy must be explicit in code. |
-| Platform row, with replacement | **`REPLACED`** | **替换** | Old + new keys both participate in merged schema; **`replacement_key`** required. CMS/Site use **display priority** (e.g. only-old → show old; new has value → show new only). |
+| Platform row, no replacement | **`RETIRED`** (`epPlatformMetadataTemplateFieldStatus`) | **退场** | Field is sunset **without** a replacement key. It stays in a merchant schema only when that binding root was bound before `template_status_at`. |
+| Platform row, with replacement | **`REPLACED`** | **替换** | The **new** key always merges. The **old** key follows the same binding-generation rule as **`RETIRED`**. CMS/Site display priority is unchanged when the old key is still in the schema. |
 
 **Naming rules**
 
 - Do **not** call platform **RETIRED/REPLACED** “suppress” or **商户弃用**—that term is for **`metadata_attribute_suppression`** only.
 - Merchant table `merchant.metadata_attribute.lifecycle_status` (`ACTIVE` / `DEPRECATED`) is **merchant-side** lifecycle; platform uses **`template_field_status`** (or equivalent column name) **`ACTIVE` | `RETIRED` | `REPLACED`**—keep concepts separate.
+- Generation clocks live on the binding root only: `platform_domain_bound_at` for industry/domain, `platform_category_bound_at` for every platform-category layer. `template_status_at` is set the first time status leaves `ACTIVE`, cleared on return to `ACTIVE`. Include a platform old key only when the matching clock is strictly earlier. Omitted keys stay in jsonb and are an allowlist on save, not a delete. Unbind of an old key that is still in schema writes `UNBIND_COPY` with `platform_attribute_id`; rebind cleanup still deletes only `FORK_FROM_PLATFORM`. Revert to `ACTIVE` is rejected while any `UNBIND_COPY` points at that platform attribute.
 
 **`merchant.metadata_attribute_suppression`**
 

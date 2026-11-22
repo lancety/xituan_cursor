@@ -29,9 +29,10 @@ A row **owns a platform binding** only when `parent_id` is null and `platform_do
 ## On bind and unbind
 
 - Platform bind clears `parent_id` and flips that category’s attribute scope from sub to parent.
-- Parent bind and parent unbind both clear descendants: `platform_domain_id`, `platform_category_id`, and `binding_status = UNBOUND`.
+- Parent bind and parent unbind both clear descendants: `platform_domain_id`, `platform_category_id`, both bound-at clocks, and `binding_status = UNBOUND`.
 - Saving “hang under merchant parent” or “no ownership” clears this row’s platform ids and sets `UNBOUND`. A binding root moving under a known parent copies only fields the parent schema does not already contain. Leaving platform with no parent still copies the full merged schema.
-- `MANUAL` and `OVERLAY` rows keep their definition and `origin_tag` when a real unbind copy runs. New platform-layer rows are `FORK_FROM_PLATFORM`. Do not rewrite product jsonb in that copy.
+- `MANUAL`, `OVERLAY`, and `UNBIND_COPY` rows keep their definition and `origin_tag` when a real unbind copy runs. New platform-layer rows are `FORK_FROM_PLATFORM`, except `RETIRED` / `REPLACED` keys still in that generation, which are inserted as `UNBIND_COPY` with `platform_attribute_id`. Do not rewrite product jsonb in that copy.
+- A platform `RETIRED` / `REPLACED` key stays in the merged schema only when the binding-root clock (`platform_domain_bound_at` for industry/domain, `platform_category_bound_at` for the platform category chain) is strictly earlier than `template_status_at`. Keys omitted that way may remain in product jsonb and must not be deleted or rejected as unknown.
 
 ## Before finishing a change
 
