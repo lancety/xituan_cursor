@@ -107,7 +107,7 @@ Input: **`merchantId`**, product **`categoryId`** (leaf subcategory typical).
 
 | Layer | English (code) | Chinese (product copy) | Meaning |
 |-------|----------------|------------------------|---------|
-| Merchant task + `merchant.metadata_attribute_suppression` | **suppression** | **弃用** | Record-only: **does not** delete `products.metadata` values or merchant definition rows; tasks can be **rolled back**. |
+| Merchant task + `merchant.metadata_attribute_suppression` | **suppression** | **弃用** | Turns off CMS, site, print-binding, facet, and search for that key. Does **not** delete `products.metadata` values. Pure merchant rows also become `DEPRECATED` and stay in the effective schema with those axes off. Platform `RETIRED`/`REPLACED` only write suppression. Tasks can be **rolled back**. |
 | Platform row, no replacement | **`RETIRED`** (`epPlatformMetadataTemplateFieldStatus`) | **退场** | Field is sunset **without** a replacement key. It stays in a merchant schema only when that binding root was bound before `template_status_at`. |
 | Platform row, with replacement | **`REPLACED`** | **替换** | The **new** key always merges. The **old** key follows the same binding-generation rule as **`RETIRED`**. CMS/Site display priority is unchanged when the old key is still in the schema. |
 
@@ -115,12 +115,14 @@ Input: **`merchantId`**, product **`categoryId`** (leaf subcategory typical).
 
 - Do **not** call platform **RETIRED/REPLACED** “suppress” or **商户弃用**—that term is for **`metadata_attribute_suppression`** only.
 - Merchant table `merchant.metadata_attribute.lifecycle_status` (`ACTIVE` / `DEPRECATED`) is **merchant-side** lifecycle; platform uses **`template_field_status`** (or equivalent column name) **`ACTIVE` | `RETIRED` | `REPLACED`**—keep concepts separate.
-- Generation clocks live on the binding root only: `platform_domain_bound_at` for industry/domain, `platform_category_bound_at` for every platform-category layer. `template_status_at` is set the first time status leaves `ACTIVE`, cleared on return to `ACTIVE`. Include a platform old key only when the matching clock is strictly earlier. Omitted keys stay in jsonb and are an allowlist on save, not a delete. Unbind of an old key that is still in schema writes `UNBIND_COPY` with `platform_attribute_id`; rebind cleanup still deletes only `FORK_FROM_PLATFORM`. Revert to `ACTIVE` is rejected while any `UNBIND_COPY` points at that platform attribute.
+- Bind, unbind, same-source rebind, and revert-to-`ACTIVE` rules are canonical in [`metadata-category-ownership-binding.md`](../../../xituan_agent/devGuide/metadata-category-ownership-binding.md) （退场 / 替换按绑定世代，以及「编辑列表、迁移列表、保存提示」）. Do not restate a second copy here.
+- Deprecate is allowed for a pure merchant key (`platform_attribute_id` null, not in the platform merge; lifecycle becomes `DEPRECATED`), a platform key whose status is `RETIRED` or `REPLACED` (suppression only), and an unbound `UNBIND_COPY` (suppression only, `platform_attribute_id` kept, lifecycle stays `ACTIVE`). Platform `ACTIVE` keys cannot be deprecated.
+- Revert to `ACTIVE` reads suppression only. An active suppression blocks when that scope has no custom row, or the custom row's `platform_attribute_id` is this attribute. A null `platform_attribute_id` on a same-key custom row does not block. An `UNBIND_COPY` alone does not block.
 
 **`merchant.metadata_attribute_suppression`**
 
-- Rows mean the merchant **chose** to hide/stop using a key for that scope (migration wizard / deprecate flow).
-- **Anti-pattern**: `ProductMetadataSchemaService.computeEffectiveFields` **filter-removing** suppressed keys from `fields` **without** a paired save/validation strategy causes **`PRODUCT_METADATA_INVALID`** when jsonb still contains that key. Prefer **visibility overlay** and/or **save-time strip / allowlist extension** (see Cursor plan §3).
+- Rows mean the merchant turned off all five display axes for that key. Required checks are skipped. Print **output** still uses the stored entity path; `visibleInPrint: false` only hides the key in the template binding tree. The print editor lists suppressed keys once at the top.
+- Suppressed keys stay in `fields` (`merchantSuppressed: true`). Pure-merchant `DEPRECATED` rows are loaded back into the effective schema the same way so old jsonb stays valid.
 
 **Site facet**
 
