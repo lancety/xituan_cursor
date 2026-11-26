@@ -1,0 +1,22 @@
+---
+description: Do not batch-rewrite source with scripts during implementation unless the developer allows it
+alwaysApply: true
+---
+
+# No scripted batch code edits
+
+When implementing or fixing code, change source files with the editor (search-replace or writing the file). Do not run a script that rewrites source.
+
+## Forbidden unless the developer explicitly allows it in this turn
+
+- `node -e`, `python -c`, PowerShell, `sed`, or any other one-off script whose job is to splice, generate, or overwrite application source
+- A script that walks the repo and rewrites many source files
+- Shell command substitution that builds source text and writes it into a `.ts`, `.tsx`, `.sql`, `.json`, or `.md` file
+
+## Allowed
+
+- Editor edits to the files being changed
+- One-shot commands that do not rewrite source: tests, `tsc`, git status, formatting the developer already uses
+- A script the developer asked for as the deliverable itself (a tool they want to keep)
+
+If a mechanical rewrite looks necessary, ask first. Do not start it and clean up afterwards.

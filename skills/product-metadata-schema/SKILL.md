@@ -107,7 +107,7 @@ Input: **`merchantId`**, product **`categoryId`** (leaf subcategory typical).
 
 | Layer | English (code) | Chinese (product copy) | Meaning |
 |-------|----------------|------------------------|---------|
-| Merchant task + `merchant.metadata_attribute_suppression` | **suppression** | **弃用** | Turns off CMS, site, print-binding, facet, and search for that key. Does **not** delete `products.metadata` values. Pure merchant rows also become `DEPRECATED` and stay in the effective schema with those axes off. Platform `RETIRED`/`REPLACED` only write suppression. Tasks can be **rolled back**. |
+| Merchant task + `merchant.metadata_attribute_suppression` | **suppression** | **弃用** | Two switches on the current merchant category. `platform_off_id` set turns off that platform attribute. `platform_off_id` null turns off the merchant same-key row. Does **not** delete `products.metadata` values and does **not** change `lifecycle_status`. Tasks can be **rolled back**. |
 | Platform row, no replacement | **`RETIRED`** (`epPlatformMetadataTemplateFieldStatus`) | **退场** | Field is sunset **without** a replacement key. It stays in a merchant schema only when that binding root was bound before `template_status_at`. |
 | Platform row, with replacement | **`REPLACED`** | **替换** | The **new** key always merges. The **old** key follows the same binding-generation rule as **`RETIRED`**. CMS/Site display priority is unchanged when the old key is still in the schema. |
 
@@ -116,13 +116,16 @@ Input: **`merchantId`**, product **`categoryId`** (leaf subcategory typical).
 - Do **not** call platform **RETIRED/REPLACED** “suppress” or **商户弃用**—that term is for **`metadata_attribute_suppression`** only.
 - Merchant table `merchant.metadata_attribute.lifecycle_status` (`ACTIVE` / `DEPRECATED`) is **merchant-side** lifecycle; platform uses **`template_field_status`** (or equivalent column name) **`ACTIVE` | `RETIRED` | `REPLACED`**—keep concepts separate.
 - Bind, unbind, same-source rebind, and revert-to-`ACTIVE` rules are canonical in [`metadata-category-ownership-binding.md`](../../../xituan_agent/devGuide/metadata-category-ownership-binding.md) （退场 / 替换按绑定世代，以及「编辑列表、迁移列表、保存提示」）. Do not restate a second copy here.
-- Deprecate is allowed for a pure merchant key (`platform_attribute_id` null, not in the platform merge; lifecycle becomes `DEPRECATED`), a platform key whose status is `RETIRED` or `REPLACED` (suppression only), and an unbound `UNBIND_COPY` (suppression only, `platform_attribute_id` kept, lifecycle stays `ACTIVE`). Platform `ACTIVE` keys cannot be deprecated.
-- Revert to `ACTIVE` reads suppression only. An active suppression blocks when that scope has no custom row, or the custom row's `platform_attribute_id` is this attribute. A null `platform_attribute_id` on a same-key custom row does not block. An `UNBIND_COPY` alone does not block.
+- Deprecate writes one switch on the current category only. A merchant row can be deprecated whether or not it is bound to a platform attribute. A platform attribute can be deprecated only when it is `RETIRED` or `REPLACED`. If both sides exist and the task does not say which side, reject.
+- Revert to `ACTIVE` is blocked by an active row whose `platform_off_id` is this attribute, or by an active null `platform_off_id` row whose same-scope merchant attribute is bound to this id. A same-name merchant row that is not bound to this id does not block.
+- Delete a merchant attribute only after its merchant switch is on (`PRODUCT_METADATA_ATTRIBUTE_DELETE_REQUIRES_DEPRECATE`). Delete also removes that category's null `platform_off_id` suppression row. The platform switch, completed migration tasks, and product jsonb stay.
+- Merge is lower-wins. A subcategory row replaces the binding-root row and ignores that root’s same-key deprecation. With no subcategory row, the binding-root row and its deprecation apply. With no merchant row, the platform field is used, and a platform switch on the current category or the binding root turns the five axes off.
+- List 「被覆盖」 is the **状态** column, not **平台状态**. Platform status stays 现行 / 退场 / 替换; the key, name, platform status, type, and the row’s other text are struck through, and actions are hidden. A same-key merchant row on the current category or the binding root overrides industry, domain, and platform-category rows. On a subcategory page, a same-key subcategory row overrides the binding-root row; without it the binding root shows its own 正常 / 弃用. The current category’s own rows are never overridden. Detail: devGuide 「编辑列表、迁移列表、保存提示」.
 
 **`merchant.metadata_attribute_suppression`**
 
-- Rows mean the merchant turned off all five display axes for that key. Required checks are skipped. Print **output** still uses the stored entity path; `visibleInPrint: false` only hides the key in the template binding tree. The print editor lists suppressed keys once at the top.
-- Suppressed keys stay in `fields` (`merchantSuppressed: true`). Pure-merchant `DEPRECATED` rows are loaded back into the effective schema the same way so old jsonb stays valid.
+- Rows mean one switch is on. The merchant switch (`platform_off_id` null) turns off the five display axes of that merchant row. The platform switch turns off the platform field only when no merchant row wins. Required checks are skipped for a suppressed field. Print **output** still uses the stored entity path; `visibleInPrint: false` only hides the key in the template binding tree. The print editor lists suppressed keys once at the top.
+- A suppressed field stays in `fields` (`merchantSuppressed: true`). Merchant rows stay in the merge whether `lifecycle_status` is `ACTIVE` or `DEPRECATED`, so old jsonb stays valid.
 
 **Site facet**
 
